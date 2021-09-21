@@ -1,0 +1,5 @@
+POST http://localhost:8888/fhir/$check-gecco-conformance
+Content-Type: application/json
+
+< gecco-bundle-7bfc3b07-a97d-4e11-8ac6-b970c1745476.json
+
