@@ -6,6 +6,8 @@ import com.xenomachina.argparser.default
 import org.hl7.fhir.r4.model.*
 import java.io.File
 import java.io.FileWriter
+import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
 
 class MyArgs(parser: ArgParser) {
     val serverUrl by parser.storing(
@@ -95,9 +97,11 @@ suspend fun main(args: Array<String>) {
     suspend fun retrieveQuestionnaire(qr: QuestionnaireResponse): Questionnaire {
         val canonical = qr.questionnaire
         if (!cache.containsKey(canonical)) {
+            print("  Retrieving corresponding Questionnaire '${qr.questionnaire}'... ")
             val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(canonical.substringBeforeLast("|"), canonical.substringAfterLast("|"), downloader.retrieveAccessToken())
             val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
             cache[canonical] = questionnaire
+            println("SUCCESS")
         }
         return cache[canonical]!!
     }
@@ -115,8 +119,9 @@ suspend fun main(args: Array<String>) {
             val qr = parser.parseResource(qrString) as QuestionnaireResponse
             println("SUCCESS")
 
-            print("  Retrieving corresponding Questionnaire and adding extensions... ")
             val questionnaire = retrieveQuestionnaire(qr)
+
+            print("  Adding extensions from Questionnaire to QuestionnaireResponse...")
             addExtensions(qr, questionnaire)
             println("SUCCESS")
 
@@ -127,7 +132,7 @@ suspend fun main(args: Array<String>) {
             }
 
             val logicalModel = toLogicalModel(qr)
-            println("  Mapping to GECCO Profile... ")
+            print("  Mapping to GECCO resources... ")
             val bundle = logicalModelToGeccoProfile(
                 logicalModel,
                 IdType(queueItem.SubjectId).withServerBase(fhirServerBase, "Patient"),
@@ -142,8 +147,8 @@ suspend fun main(args: Array<String>) {
             if (parsedArgs.outputDirectory != null) {
                 print("  Writing to files... ")
                 parsedArgs.outputDirectory!!.mkdirs()
-                parser.encodeResourceToWriter(qr, FileWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-qr.json")))
-                parser.encodeResourceToWriter(bundle, FileWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-gecco-bundle.json")))
+                parser.encodeResourceToWriter(qr, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-qr.json").outputStream(),StandardCharsets.UTF_8))
+                parser.encodeResourceToWriter(bundle, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-gecco-bundle.json").outputStream(), StandardCharsets.UTF_8))
                 println("SUCCESS")
             }
 
