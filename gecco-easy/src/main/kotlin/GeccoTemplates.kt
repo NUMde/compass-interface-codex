@@ -561,8 +561,6 @@ fun ObservationLab(patientRef: Reference, coding: Coding, quantity: Quantity, re
 	subject = patientRef
 	value = quantity
 	effective = recordedDate
-
-
 }
 
 

@@ -1024,7 +1024,7 @@ enum class Symptom(override val codeableConcept: CodeableConcept): ConceptEnum<S
 	}),
 	NAUSEA(CodeableConcept().apply {
 		coding = listOf(snomed("422587007", "Nausea (finding)"))
-		text = "Überlkeit"
+		text = "Übelkeit"
 	}),
 	PAIN_IN_THROAT(CodeableConcept().apply {
 		coding = listOf(snomed("162397003", "Pain in throat (finding)"))
