@@ -10,24 +10,30 @@ This project consists of three components, which can also be used on their own:
 * **gecco-easy**: A set of template functions, that can be used to fill easier the GECCO profiles.
 * **gecco-questionnaire**: Defines a logical model for gecco and creates the reference Questionnaire from that, also contains code 
 to extract the GECCO Profiles from the logical model.
+
+![](docs/Compass-Pipeline-Complete-white.png)
   
 ## How dows this work?
 ![](docs/Overview%20LogicalModel.png)
 The LogicalModel (`gecco-questionnaire/src/main/kotlin/LogicalModel.kt`) is introspected via reflection to generate a reference Questionnaire,
-from which the items can be copied into any other Questionnaire. The relation to the LogicalModel is kept in the [`https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem`](https://github.com/NUMde/compass-implementation-guide/blob/master/input/pagecontent/index.md) extension.
+from which the items can be edited or copied into another Questionnaire, preferably the 
+[questionnare editor Healex developed for Compass](https://github.com/NUMde/compass-questionnaire-editor). The relation 
+to the LogicalModel is preserved in the [`https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem`](https://github.com/NUMde/compass-implementation-guide/blob/master/input/pagecontent/index.md) extension.
 
-This is extension will be also available on the items on the resulting QuestionnaireResponse. This is used to fill the LogicalModel
-and then, the LogicalModel can be converted into a Bundle of FHIR resources conforming to the GECCO profiles.
+This is extension should be also available on the items on the resulting QuestionnaireResponse by the EDC app. At the moment, 
+as a temporary solution, this component will copy the extensions from the Questionnaire in FHIR. 
 
-![](docs/Compass-Pipeline-Complete-white.png)  
+The extension is used to fill the LogicalModel, the LogicalModel can be converted into a Bundle of FHIR resources conforming to the GECCO profiles.
+
+
 
 ## Usage
 ### IMPORTANT HINT
-You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than
+⚠You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than
 128 Bit due to legal reasons.
 
 ## Beginning 
-Download .jar file from releases page and execute: 
+Download .jar file from GitHub's releases page and execute: 
 ```
 java -jar compass-interface-codex-1.0.1-all.jar 
    --serverUrl "http://127.0.0.1:8080/" 
@@ -44,7 +50,8 @@ java -jar compass-interface-codex-1.0.1-all.jar
    --uploadQuestionnaires
    --uploadQuestionnaireResponses
 ```
-The `--targetFhirRepository` is required even if you don't use any of the --upload options, as it is used to generate resource IDs.
+The `--targetFhirRepository` is required even if you don't use any of the `--upload[...]` options, because it is required
+to generate resource IDs.
 
 This script does the following:
 ```
@@ -75,23 +82,25 @@ if --uploadQuestionnaires is set:
         uploadResoureToFhirRepository(questionnaire)         
         
 ```
-`--uploadBundle` and `--uploadBundleEntries` differ in the way the resources are sent to the FHIR server: 
-`--uploadBundle` puts the entire Bundle under the `/Bundle` endpoint of the FHIR API, so that you can query one 
-QuestionnaireResponse's conversion result using `GET /Bundle/{QueueItemUUID}`, while `--uploadBundleEntries` puts all the
-bundle's resources under there corresponding endpoints (like `/Patient`, `/Observation`, ...). `--uploadQuestionnaires` 
-also inserts the used Questionnaires into the FHIR repository. This way, you can use the `Import Questionnaire...` function of the 
-[FhirExtinguisher](https://github.com/JohannesOehm/FhirExtinguisher) more conveniently.
+`--uploadBundle` and `--uploadBundleEntries` differ in the way the resources will be sent to the FHIR server: 
+The `--uploadBundle` option puts the entire Bundle as a single resource under the `/Bundle` endpoint of the FHIR API, so
+that one can query the QuestionnaireResponse's conversion result using `GET /Bundle/{QueueItemUUID}`, while the 
+`--uploadBundleEntries` option puts all the bundle's entries under their corresponding endpoints (like `/Patient`, `/Observation`, ...). 
 
-A direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that. You can create your 
-own component for that (see below). 
+With `--uploadQuestionnaires`, the component also inserts the used Questionnaires into the FHIR repository. This way, you 
+can use the `Import Questionnaire...` function of the [FhirExtinguisher](https://github.com/JohannesOehm/FhirExtinguisher) 
+more conveniently.
 
-## More complex scenarios
-To be more flexible, you can easily setup an IDE for Kotlin development (I recommend IntelliJ Community), checkout project 
+The direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that, but we are working 
+on that. To use this component in more complex scenarios, you can create your own component with a few lines of code (see below). 
+
+## custom scenarios
+To be more flexible, you can easily setup an IDE for Kotlin development (I recommend IntelliJ Community), checkout this repository 
 and edit `src/main/kotlin/custom-main.kt`. If you want to create an executable .jar, run `./gradlew shadowJar` after 
 renaming your `custom-main.kt` to `main.kt`.  
 
 # Current limitations
-Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of GECCO are currently not supported. 
+Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are currently not supported. 
 
 # Special cases in the logical model
 * `demographics.ageInYears`, `demographics.ageInMonth` and `demographics.birthDate` are interchangeable, just ask for one 
