@@ -44,6 +44,7 @@ java -jar compass-interface-codex-1.0.1-all.jar
    --certificate cacert.pem 
    --targetFhirRepository https://localhost:8082/fhir
    --basicAuth username:password
+   --questionnairesFolder ./questionnaires
    --outDir ./out 
    --uploadBundle 
    --uploadBundleEntries 
@@ -82,6 +83,9 @@ if --uploadQuestionnaires is set:
         uploadResoureToFhirRepository(questionnaire)         
         
 ```
+Instead of retrieving the Questionnaire from [compass-numapp-backend](https://github.com/NUMde/compass-numapp-backend),
+you can define a folder with JSON Questionnaires using the `--questionnairesFolder` option.
+
 `--uploadBundle` and `--uploadBundleEntries` differ in the way the resources will be sent to the FHIR server: 
 The `--uploadBundle` option puts the entire Bundle as a single resource under the `/Bundle` endpoint of the FHIR API, so
 that one can query the QuestionnaireResponse's conversion result using `GET /Bundle/{QueueItemUUID}`, while the 

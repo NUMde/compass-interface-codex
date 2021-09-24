@@ -5,6 +5,7 @@ import com.xenomachina.argparser.SystemExitException
 import com.xenomachina.argparser.default
 import org.hl7.fhir.r4.model.*
 import java.io.File
+import java.io.FileReader
 import java.io.FileWriter
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
@@ -61,6 +62,10 @@ class MyArgs(parser: ArgParser) {
     val uploadQuestionnaireResponses by parser.flagging(
         "--uploadQuestionnaireResponses",
         help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository")
+
+    val questionnairesFolder by parser.storing(
+        "--questionnairesFolder",
+        help = "Folder, where the Questionnaires are located, if you don't want to download them from compass-numapp-backend"){File(this)}.default<File?>(null)
 }
 
 
@@ -94,17 +99,37 @@ suspend fun main(args: Array<String>) {
     )
 
     val cache = mutableMapOf<String, Questionnaire>()
+
+    fun findInFolder(folder:File, url: String, version: String): Questionnaire? {
+        println("Retrieving from file!")
+        for (file in folder.listFiles()) {
+            val questionnaire = parser.parseResource(FileReader(file)) as Questionnaire
+            if (questionnaire.url == url && questionnaire.version == version) {
+                return questionnaire
+            }
+        }
+        return null
+    }
     suspend fun retrieveQuestionnaire(qr: QuestionnaireResponse): Questionnaire {
         val canonical = qr.questionnaire
         if (!cache.containsKey(canonical)) {
             print("  Retrieving corresponding Questionnaire '${qr.questionnaire}'... ")
-            val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(canonical.substringBeforeLast("|"), canonical.substringAfterLast("|"), downloader.retrieveAccessToken())
-            val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
-            cache[canonical] = questionnaire
+            val url = canonical.substringBeforeLast("|")
+            val version = canonical.substringAfterLast("|")
+            if (parsedArgs.questionnairesFolder != null) {
+                cache[canonical] = findInFolder(parsedArgs.questionnairesFolder!!, url, version) ?: throw Exception("Cannot find Questionnaire '${qr.questionnaire}' in folder!")
+            } else {
+                val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(url, version, downloader.retrieveAccessToken())
+                val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
+                cache[canonical] = questionnaire
+            }
             println("SUCCESS")
         }
         return cache[canonical]!!
     }
+
+
+
 
     val queueItems = downloader.retrieveAllQueueItems()
     for (queueItem in queueItems) {
@@ -186,6 +211,8 @@ suspend fun main(args: Array<String>) {
         println("SUCCESS")
     }
 }
+
+
 
 fun wrapProgress(message: String, block: () -> Unit) {
     print("  $message...")
