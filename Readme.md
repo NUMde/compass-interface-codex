@@ -94,8 +94,8 @@ more conveniently.
 The direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that, but we are working 
 on that. To use this component in more complex scenarios, you can create your own component with a few lines of code (see below). 
 
-## custom scenarios
-To be more flexible, you can easily setup an IDE for Kotlin development (I recommend IntelliJ Community), checkout this repository 
+## Custom scenarios
+To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this repository 
 and edit `src/main/kotlin/custom-main.kt`. If you want to create an executable .jar, run `./gradlew shadowJar` after 
 renaming your `custom-main.kt` to `main.kt`.  
 

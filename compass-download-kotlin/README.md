@@ -1,11 +1,13 @@
-# compass-dlkot
+# compass-download-kotlin
+This is a clone of [compass-numapp-downloader](https://github.com/NUMde/compass-numapp-downloader), written in Kotlin 
+instead of Python. This is why the interface component does have to depend on a Python installation.
 
 ## IMPORTANT HINT
 You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than 
 128 Bit due to legal reasons.
 
-## Example
-To load the certificate, public and private key files in the sample code below, put them under `src/main/resources`
+## Example usage
+To load the certificate, public and private key files in the sample code below, put them under `src/main/resources`:
 ```kotlin
 suspend fun main(args: Array<String>) {
     val privateKeyFile = Paths.get(ClassLoader.getSystemResource("private_key.pem").toURI()).toFile()
