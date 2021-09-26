@@ -1,6 +1,6 @@
 # compass-download-kotlin
 This is a clone of [compass-numapp-downloader](https://github.com/NUMde/compass-numapp-downloader), written in Kotlin 
-instead of Python. This is why the interface component does have to depend on a Python installation.
+instead of Python. This is why the interface component does not depend on a Python installation.
 
 ## IMPORTANT HINT
 You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than 
