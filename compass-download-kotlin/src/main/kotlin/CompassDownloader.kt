@@ -1,11 +1,13 @@
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.features.json.JsonFeature
-import io.ktor.client.features.json.serializer.KotlinxSerializer
+import io.ktor.client.features.json.serializer.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.serialization.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import org.bouncycastle.cms.*
@@ -15,7 +17,6 @@ import org.bouncycastle.cms.jcajce.JceKeyTransRecipient
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
-import java.lang.Exception
 import java.nio.charset.StandardCharsets
 import java.security.*
 import java.security.cert.CertificateFactory
@@ -31,7 +32,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import kotlin.collections.ArrayList
 
 object PemUtils {
     fun loadPrivateKey(privateKeyFile: File): PrivateKey {
@@ -175,12 +175,12 @@ class CompassDownloader(
     }
 
     suspend fun retrieveQuestionnaireStringByUrlAndVersion(url: String, version: String, access_token: String): String {
-        return client.get<String> {
+        return client.get<JsonObject> {
             url("${serverUrl.removeSuffix("/")}/api/questionnaire")
             parameter("url", url)
             parameter("version", version)
             header("Authorization", "Bearer $access_token")
-        }
+        }["body"].toString()
     }
 
 
@@ -193,6 +193,42 @@ class CompassDownloader(
         }
         return pageResponse.status == HttpStatusCode.OK
     }
+
+
+    suspend fun addQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
+        val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
+
+        val pageResponse = client.post<HttpResponse> {
+            url("${serverUrl.removeSuffix("/")}/api/questionnaire")
+            header("Authorization", "Bearer $access_token")
+            contentType(ContentType.Application.Json)
+            body = buildJsonObject {
+                put("name", name)
+                put("url", questionnaireJson["url"]!!.jsonPrimitive.content)
+                put("version", questionnaireJson["version"]!!.jsonPrimitive.content)
+                put("questionnaire", questionnaireJson)
+            }
+        }
+        return pageResponse.status == HttpStatusCode.OK
+    }
+
+    suspend fun updateQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
+        val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
+
+        val pageResponse = client.put<HttpResponse> {
+            url("${serverUrl.removeSuffix("/")}/api/questionnaire")
+            header("Authorization", "Bearer $access_token")
+            contentType(ContentType.Application.Json)
+            body = buildJsonObject {
+                put("name", name)
+                put("url", questionnaireJson["url"]!!.jsonPrimitive.content)
+                put("version", questionnaireJson["version"]!!.jsonPrimitive.content)
+                put("questionnaire", questionnaireJson)
+            }
+        }
+        return pageResponse.status == HttpStatusCode.OK
+    }
+
 
     fun verifyJWTAndDecode(jwt: String): String {
         val charset = StandardCharsets.UTF_8
