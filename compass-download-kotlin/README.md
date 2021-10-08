@@ -20,5 +20,26 @@ suspend fun main(args: Array<String>) {
     )
     val decryptQueueItems = downloader.decryptQueueItems(downloader.getAllQueueItems())
     println(decryptQueueItems)
+
+
 }
+```
+
+You can also use the downloader object to add or update questionnaires:
+
+```kotlin
+val questionnaire = Questionnaire().apply {
+    url = "https://my-questionnaire-url.de/"
+    version = "1.0"
+    // [...]
+}
+
+val accessToken = downloader.retrieveAccessToken()
+
+val parser = FhirContext.forR4().newJsonParser()
+downloader.addQuestionnaire("myName", parser.encodeResourceToString(q), accessToken)
+//or: downloader.updateQuestionnaire(...) if you want to update
+val jsonString =
+    downloader.retrieveQuestionnaireStringByUrlAndVersion("https://my-questionnaire-url.de/", "1.0", accessToken)
+
 ```
