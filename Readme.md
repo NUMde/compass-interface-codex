@@ -50,6 +50,7 @@ java -jar compass-interface-codex-1.0.1-all.jar
    --uploadBundleEntries 
    --uploadQuestionnaires
    --uploadQuestionnaireResponses
+   --noComposition
 ```
 The `--targetFhirRepository` is required even if you don't use any of the `--upload[...]` options, because it is required
 to generate resource IDs.
@@ -86,25 +87,40 @@ if --uploadQuestionnaires is set:
 Instead of retrieving the Questionnaire from [compass-numapp-backend](https://github.com/NUMde/compass-numapp-backend),
 you can define a folder with JSON Questionnaires using the `--questionnairesFolder` option.
 
-`--uploadBundle` and `--uploadBundleEntries` differ in the way the resources will be sent to the FHIR server: 
+`--uploadBundle` and `--uploadBundleEntries` differ in the way the resources will be sent to the FHIR server:
 The `--uploadBundle` option puts the entire Bundle as a single resource under the `/Bundle` endpoint of the FHIR API, so
-that one can query the QuestionnaireResponse's conversion result using `GET /Bundle/{QueueItemUUID}`, while the 
-`--uploadBundleEntries` option puts all the bundle's entries under their corresponding endpoints (like `/Patient`, `/Observation`, ...). 
+that one can query the QuestionnaireResponse's conversion result using `GET /Bundle/{QueueItemUUID}`, while the
+`--uploadBundleEntries` option puts all the bundle's entries under their corresponding endpoints (like `/Patient`
+, `/Observation`, ...).
 
-With `--uploadQuestionnaires`, the component also inserts the used Questionnaires into the FHIR repository. This way, you 
-can use the `Import Questionnaire...` function of the [FhirExtinguisher](https://github.com/JohannesOehm/FhirExtinguisher) 
+With `--uploadQuestionnaires`, the component also inserts the used Questionnaires into the FHIR repository. This way,
+you can use the `Import Questionnaire...` function of
+the [FhirExtinguisher](https://github.com/JohannesOehm/FhirExtinguisher)
 more conveniently.
 
-The direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that, but we are working 
-on that. To use this component in more complex scenarios, you can create your own component with a few lines of code (see below). 
+By default, the component creates a [document-Bundle](https://www.hl7.org/fhir/documents.html), which contains
+Composition, Device and Organization resources as required for the validator. With the `--noComposition` option, you can
+create a
+[transaction-Bundle](https://www.hl7.org/fhir/bundle.html#transaction) containing only the GECCO resources instead.
+
+## ehrbase & fhir-bridge
+
+If you want to use the [fhir-bridge](https://github.com/ehrbase/fhir-bridge) endpoint instead of a traditional FHIR
+repository, please use only the `--uploadBundleEntries` and the `--noComposition` option.
+
+The direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that, but we are
+working on that.
 
 ## Custom scenarios
-To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this repository 
-and edit `src/main/kotlin/custom-main.kt`. If you want to create an executable .jar, run `./gradlew shadowJar` after 
-renaming your `custom-main.kt` to `main.kt`.  
+
+To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this
+repository and edit `src/main/kotlin/custom-main.kt`. If you want to create an executable .jar,
+run `./gradlew shadowJar` after renaming your `custom-main.kt` to `main.kt`.
 
 # Current limitations
-Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are currently not supported. 
+
+Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are
+currently not supported.
 
 # Special cases in the logical model
 * `demographics.ageInYears`, `demographics.ageInMonth` and `demographics.birthDate` are interchangeable, just ask for one 

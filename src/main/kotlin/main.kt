@@ -6,7 +6,6 @@ import com.xenomachina.argparser.default
 import org.hl7.fhir.r4.model.*
 import java.io.File
 import java.io.FileReader
-import java.io.FileWriter
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 
@@ -57,15 +56,23 @@ class MyArgs(parser: ArgParser) {
 
     val uploadQuestionnaires by parser.flagging(
         "--uploadQuestionnaires",
-        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository")
+        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository"
+    )
 
     val uploadQuestionnaireResponses by parser.flagging(
         "--uploadQuestionnaireResponses",
-        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository")
+        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository"
+    )
 
     val questionnairesFolder by parser.storing(
         "--questionnairesFolder",
-        help = "Folder, where the Questionnaires are located, if you don't want to download them from compass-numapp-backend"){File(this)}.default<File?>(null)
+        help = "Folder, where the Questionnaires are located, if you don't want to download them from compass-numapp-backend"
+    ) { File(this) }.default<File?>(null)
+
+    val simple by parser.flagging(
+        "--noComposition",
+        help = "Do not use document-Bundle containing Composition, Device, Organization and Questionnaire resource required for compass-num-conformance-checker"
+    )
 }
 
 
@@ -101,7 +108,7 @@ suspend fun main(args: Array<String>) {
     val cache = mutableMapOf<String, Questionnaire>()
 
     fun findInFolder(folder:File, url: String, version: String): Questionnaire? {
-        println("Retrieving from file!")
+        print(" from folder... ")
         for (file in folder.listFiles()) {
             val questionnaire = parser.parseResource(FileReader(file)) as Questionnaire
             if (questionnaire.url == url && questionnaire.version == version) {
@@ -113,12 +120,13 @@ suspend fun main(args: Array<String>) {
     suspend fun retrieveQuestionnaire(qr: QuestionnaireResponse): Questionnaire {
         val canonical = qr.questionnaire
         if (!cache.containsKey(canonical)) {
-            print("  Retrieving corresponding Questionnaire '${qr.questionnaire}'... ")
+            print("  Retrieving corresponding Questionnaire '${qr.questionnaire}'")
             val url = canonical.substringBeforeLast("|")
             val version = canonical.substringAfterLast("|")
             if (parsedArgs.questionnairesFolder != null) {
                 cache[canonical] = findInFolder(parsedArgs.questionnairesFolder!!, url, version) ?: throw Exception("Cannot find Questionnaire '${qr.questionnaire}' in folder!")
             } else {
+                print(" from server... ")
                 val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(url, version, downloader.retrieveAccessToken())
                 val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
                 cache[canonical] = questionnaire
@@ -158,11 +166,16 @@ suspend fun main(args: Array<String>) {
 
             val logicalModel = toLogicalModel(qr)
             print("  Mapping to GECCO resources... ")
+            val bundleBuilder = if (parsedArgs.simple) {
+                TransactionBundleBuilder()
+            } else {
+                ValidationServerBundleBuilder(Author(), App(), questionnaire)
+            }
             val bundle = logicalModelToGeccoProfile(
                 logicalModel,
                 IdType(queueItem.SubjectId).withServerBase(fhirServerBase, "Patient"),
                 DateTimeType(queueItem.AbsendeDatum),
-                ValidationServerBundleBuilder(Author(), App(), questionnaire)
+                bundleBuilder
             )
             bundle.id = queueItem.UUID
             bundle.identifier.value = queueItem.UUID
@@ -185,10 +198,19 @@ suspend fun main(args: Array<String>) {
 
 
             if (parsedArgs.uploadBundleEntries) {
-                print("  Uploading Bundle entries to FHIR repository... ")
-                for(entry in bundle.entry) {
-                    if(entry.resource !is Questionnaire && entry.resource !is Device && entry.resource !is Organization) {
-                        client.create().resource(entry.resource).execute()
+                println("  Uploading Bundle entries to FHIR repository... ")
+                for ((index, entry) in bundle.entry.withIndex()) {
+                    if (entry.resource !is Questionnaire && entry.resource !is Device && entry.resource !is Organization) {
+                        try {
+                            printAndFlush("    $index: ${entry.resource.meta.profile}")
+                            client.create().resource(entry.resource).execute()
+                            println(" DONE")
+                        } catch (e: Exception) {
+                            println()
+                            println("Cannot upload ${entry.resource}: $e")
+                            println(parser.encodeResourceToString(entry.resource))
+                            println()
+                        }
                     }
                 }
                 println("SUCCESS")
@@ -213,14 +235,18 @@ suspend fun main(args: Array<String>) {
 }
 
 
-
 fun wrapProgress(message: String, block: () -> Unit) {
     print("  $message...")
     try {
         block()
-    } catch (e: Exception){
+    } catch (e: Exception) {
         println("FAILED")
         throw e
     }
     println("SUCCESS")
+}
+
+fun printAndFlush(message: String) {
+    print(message)
+    System.out.flush()
 }

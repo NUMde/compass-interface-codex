@@ -548,6 +548,7 @@ fun AnaHIV(patientRef: Reference, yesNoUnknown: YesNoUnknown, recordedDate: Date
 fun AnaSmoking(patientRef: Reference, smokingStatus: SmokingStatus, recordedDate: DateTimeType) = Observation().apply {
 	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/smoking-status")
 	status = Observation.ObservationStatus.FINAL
+	category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 	code = CodeableConcept(loinc("72166-2", "Tobacco smoking status"))
 	subject = patientRef
 	value = smokingStatus.codeableConcept
