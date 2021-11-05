@@ -2,13 +2,8 @@ import ca.uhn.fhir.context.FhirContext
 import org.hl7.fhir.r4.model.*
 import java.io.File
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.random.Random
 
-typealias QR = QuestionnaireResponse
-typealias QRItem = QuestionnaireResponse.QuestionnaireResponseItemComponent
-typealias QItem = Questionnaire.QuestionnaireItemComponent
-typealias QRAnswer = QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent
 
 fun main() {
     val ctx = FhirContext.forR4()
@@ -21,7 +16,7 @@ fun main() {
 
 fun generateResponse(q: Questionnaire): QR {
     return QR().apply {
-        questionnaire = q.url+"|"+q.version
+        questionnaire = q.url + "|" + q.version
         authoredElement = DateTimeType.now()
         item = q.item.mapNotNull { generateItem(it) }
     }
@@ -40,7 +35,7 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
                             ?: false) == (enabledWhenAnswer as Coding).code
                     Questionnaire.QuestionnaireItemOperator.NOT_EQUAL ->
                         (actualAnswer.firstOrNull()?.valueCoding?.code
-                        ?: false) != (enabledWhenAnswer as Coding).code
+                            ?: false) != (enabledWhenAnswer as Coding).code
                     Questionnaire.QuestionnaireItemOperator.GREATER_THAN -> TODO()
                     Questionnaire.QuestionnaireItemOperator.LESS_THAN -> TODO()
                     Questionnaire.QuestionnaireItemOperator.GREATER_OR_EQUAL -> TODO()
@@ -51,7 +46,7 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
             } else true
         } else true
     }
-    if(true){
+    if (true) {
         return QRItem().apply {
             text = item.text
             linkId = item.linkId
@@ -69,9 +64,9 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
                 }
             )
             answersMap[item.linkId] = answer
-            this.item = item.item.mapNotNull { generateItem(it,answersMap) }
-            }
-    }else{
+            this.item = item.item.mapNotNull { generateItem(it, answersMap) }
+        }
+    } else {
         return null
     }
 }

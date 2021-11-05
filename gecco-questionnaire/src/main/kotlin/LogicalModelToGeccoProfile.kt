@@ -1,16 +1,14 @@
 import ca.uhn.fhir.context.FhirContext
-import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import ca.uhn.fhir.util.BundleBuilder
 import org.hl7.fhir.instance.model.api.IBaseResource
 import org.hl7.fhir.r4.model.*
+import org.hl7.fhir.r4.model.Quantity
 import java.io.FileReader
 import java.io.FileWriter
 import java.time.LocalDate
-import java.time.Period as JodaPeriod
-import java.time.ZoneId
-import java.util.*
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
+import java.time.Period as JodaPeriod
 
 
 fun main() {
@@ -39,8 +37,6 @@ fun BundleBuilder.add(resource: IBaseResource) {
     this.addCollectionEntry(resource)
 }
 
-fun LocalDate.toFhir() = DateType(this.year, this.monthValue, this.dayOfMonth)
-fun LocalDate.toUtilDate() = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
 
 fun logicalModelToGeccoProfile(
     logicalModel: LogicalModel,

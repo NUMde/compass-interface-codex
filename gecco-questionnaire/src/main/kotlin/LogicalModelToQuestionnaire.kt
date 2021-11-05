@@ -1,11 +1,13 @@
 import ca.uhn.fhir.context.FhirContext
 import org.hl7.fhir.r4.model.*
 import java.io.File
-import java.lang.Exception
 import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.*
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent as QItem
 
@@ -33,24 +35,7 @@ fun toQuestionnaire(): Questionnaire {
         })
 }
 
-fun compassGeccoItem(compassId: String) = Extension(
-    "https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem",
-    Coding(
-        "https://num-compass.science/fhir/CodeSystem/CompassGeccoItem",
-        compassId.removePrefix("."),
-        null
-    ).setVersion("1.0")
-)
 
-fun compassGeccoTargetProfile(profile: String) = Extension(
-    "https://num-compass.science/fhir/StructureDefinition/GeccoTargetProfile",
-    StringType(profile)
-)
-
-fun questionnaireUnit(coding: Coding) = Extension(
-    "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
-    coding
-)
 
 fun propertyToItem(
     property: KProperty<*>,
@@ -367,6 +352,22 @@ fun replaceGeccoIDWithLinkID(qItems: List<QItem>, mapByExtension: HashMap<String
         }
     }
 }
+
+fun compassGeccoItem(compassId: String) = Extension(
+    COMPASS_GECCO_ITEM_EXTENSION,
+    Coding(COMPASS_GECCO_ITEM_CS, compassId.removePrefix("."), null).setVersion("1.0")
+)
+
+fun compassGeccoTargetProfile(profile: String) = Extension(
+    "https://num-compass.science/fhir/StructureDefinition/GeccoTargetProfile",
+    StringType(profile)
+)
+
+fun questionnaireUnit(coding: Coding) = Extension(
+    "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+    coding
+)
+
 
 fun mapByExtension(questionnaire: Questionnaire, hashMap: HashMap<String, QItem> = HashMap()): HashMap<String, QItem> {
     questionnaire.item.forEach { mapByExtension(it, hashMap) }

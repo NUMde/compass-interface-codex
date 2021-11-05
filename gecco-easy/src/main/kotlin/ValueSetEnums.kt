@@ -7,12 +7,17 @@ import java.util.*
 fun snomed(code: String, display: String) = Coding("http://snomed.info/sct", code, display)
 fun loinc(code: String, display: String) = Coding("http://loinc.org", code, display)
 fun icd10gm(code: String, display: String) = Coding("http://fhir.de/CodeSystem/dimdi/icd-10-gm", code, display)
+
+//TODO: change to http://fhir.de/CodeSystem/bfarm/icd-10-gm
+fun alpha_id(code: String, display: String) = Coding("http://fhir.de/CodeSystem/bfarm/alpha-id", code, display)
+fun orphanet(code: String, display: String) = Coding("http://www.orpha.net", code, display)
 fun atc(code: String, display: String) = Coding("http://fhir.de/CodeSystem/dimdi/atc", code, display)
 fun dicom(code: String, display: String) = Coding("http://dicom.nema.org/resources/ontology/DCM", code, display)
-fun iso3166_1_2(code:String, display: String) = Coding("urn:iso:std:iso:3166", code, display)
-fun iso3155DE(code: String, display: String) = Coding( "urn:iso:std:iso:3166-2:de", code, display)
+fun iso3166_1_2(code: String, display: String) = Coding("urn:iso:std:iso:3166", code, display)
+fun iso3155DE(code: String, display: String) = Coding("urn:iso:std:iso:3166-2:de", code, display)
 
-interface CodeableEnum<T: Enum<T>> {
+
+interface CodeableEnum<T : Enum<T>> {
 	val coding: Coding
 }
 
@@ -283,93 +288,32 @@ enum class RadiologicFindings(val codeableConcept: CodeableConcept) {
 
 	companion object {
 		fun from(findValue: CodeableConcept): RadiologicFindings? = RadiologicFindings.values()
-			.firstOrNull{ value -> value.codeableConcept.coding.any{ coding -> findValue.hasCoding(coding.system, coding.code) } }
+			.firstOrNull { value ->
+				value.codeableConcept.coding.any { coding ->
+					findValue.hasCoding(
+						coding.system,
+						coding.code
+					)
+				}
+			}
 	}
 
 }
 
-enum class FrailityScore(override val codeableConcept: CodeableConcept): ConceptEnum<FrailityScore> {
-	VERY_FIT(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"1",
-				"Very Fit"
-			)
-		)
-	),
-	WELL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"2",
-				"Well"
-			)
-		)
-	),
-	MANAGING_WELL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"3",
-				"Managing Well"
-			)
-		)
-	),
-	VULNERABLE(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"4",
-				"Vulnerable"
-			)
-		)
-	),
-	MILDLY_FRAIL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"5",
-				"Mildly Frail"
-			)
-		)
-	),
-	MODERATELY_FRAIL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"6",
-				"Moderately Frail"
-			)
-		)
-	),
-	SEVERELY_FRAIL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"7",
-				"Severely Frail"
-			)
-		)
-	),
-	VERY_SEVERELY_FRAIL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"8",
-				"Very Severely Frail"
-			)
-		)
-	),
-	TERMINALLY_ILL(
-		CodeableConcept(
-			Coding(
-				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score",
-				"9",
-				"Terminally Ill"
-			)
-		)
-	),
+fun frailty_score(code: String, display: String) = Coding(
+	"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score", code, display
+)
+
+enum class FrailityScore(override val codeableConcept: CodeableConcept) : ConceptEnum<FrailityScore> {
+	VERY_FIT(CodeableConcept(frailty_score("1", "Very Fit"))),
+	WELL(CodeableConcept(frailty_score("2", "Well"))),
+	MANAGING_WELL(CodeableConcept(frailty_score("3", "Managing Well"))),
+	VULNERABLE(CodeableConcept(frailty_score("4", "Vulnerable"))),
+	MILDLY_FRAIL(CodeableConcept(frailty_score("5", "Mildly Frail"))),
+	MODERATELY_FRAIL(CodeableConcept(frailty_score("6", "Moderately Frail"))),
+	SEVERELY_FRAIL(CodeableConcept(frailty_score("7", "Severely Frail"))),
+	VERY_SEVERELY_FRAIL(CodeableConcept(frailty_score("8", "Very Severely Frail"))),
+	TERMINALLY_ILL(CodeableConcept(frailty_score("9", "Terminally Ill"))),
 }
 
 
