@@ -1,4 +1,5 @@
 import ca.uhn.fhir.context.FhirContext
+import ca.uhn.fhir.rest.client.api.IGenericClient
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.SystemExitException
@@ -75,9 +76,7 @@ class MyArgs(parser: ArgParser) {
     )
 }
 
-
-
-
+const val COMPASS_SUBJECT_ID = "https://num-compass.science/fhir/NamingSystem/CompassSubjectId"
 
 suspend fun main(args: Array<String>) {
     val parsedArgs = try {
@@ -143,29 +142,29 @@ suspend fun main(args: Array<String>) {
     for (queueItem in queueItems) {
         try {
             println("Processing ${queueItem.UUID}:")
-            print("  Decrypting... ")
+            printAndFlush("  Decrypting... ")
             val decryptedQueueItem = downloader.decryptQueueItem(queueItem)
             println("SUCCESS")
 
-            print("  Parsing FHIR QuestionnaireResponse... ")
+            printAndFlush("  Parsing FHIR QuestionnaireResponse... ")
             val qrString = decryptedQueueItem.data.bodyAsString
             val qr = parser.parseResource(qrString) as QuestionnaireResponse
             println("SUCCESS")
 
             val questionnaire = retrieveQuestionnaire(qr)
 
-            print("  Adding extensions from Questionnaire to QuestionnaireResponse...")
+            printAndFlush("  Adding extensions from Questionnaire to QuestionnaireResponse...")
             addExtensions(qr, questionnaire)
             println("SUCCESS")
 
             if (parsedArgs.uploadQuestionnaireResponses) {
-                print("  Uploading QuestionnaireResponse... ")
+                printAndFlush("  Uploading QuestionnaireResponse... ")
                 client.create().resource(qr).execute()
                 println("SUCCESS")
             }
 
             val logicalModel = toLogicalModel(qr)
-            print("  Mapping to GECCO resources... ")
+            printAndFlush("  Mapping to GECCO resources... ")
             val bundleBuilder = if (parsedArgs.simple) {
                 TransactionBundleBuilder()
             } else {
@@ -183,7 +182,7 @@ suspend fun main(args: Array<String>) {
 
 
             if (parsedArgs.outputDirectory != null) {
-                print("  Writing to files... ")
+                printAndFlush("  Writing to files... ")
                 parsedArgs.outputDirectory!!.mkdirs()
                 parser.encodeResourceToWriter(qr, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-qr.json").outputStream(),StandardCharsets.UTF_8))
                 parser.encodeResourceToWriter(bundle, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-gecco-bundle.json").outputStream(), StandardCharsets.UTF_8))
@@ -191,28 +190,14 @@ suspend fun main(args: Array<String>) {
             }
 
             if (parsedArgs.uploadBundle) {
-                print("  Uploading entire Bundle to FHIR repository... ")
+                printAndFlush("  Uploading entire Bundle to FHIR repository... ")
                 client.update().resource(bundle).execute()
                 println("SUCCESS")
             }
 
-
             if (parsedArgs.uploadBundleEntries) {
                 println("  Uploading Bundle entries to FHIR repository... ")
-                for ((index, entry) in bundle.entry.withIndex()) {
-                    if (entry.resource !is Questionnaire && entry.resource !is Device && entry.resource !is Organization) {
-                        try {
-                            printAndFlush("    $index: ${entry.resource.meta.profile}")
-                            client.create().resource(entry.resource).execute()
-                            println(" DONE")
-                        } catch (e: Exception) {
-                            println()
-                            println("Cannot upload ${entry.resource}: $e")
-                            println(parser.encodeResourceToString(entry.resource))
-                            println()
-                        }
-                    }
-                }
+                uploadBundleEntries(bundle, queueItem, client)
                 println("SUCCESS")
             }
             println()
@@ -223,7 +208,7 @@ suspend fun main(args: Array<String>) {
 
 
     if (parsedArgs.uploadQuestionnaires) {
-        print("POSTing Questionnaires to FHIR repository... ")
+        printAndFlush("POSTing Questionnaires to FHIR repository... ")
         for ((url, q) in cache) {
             client.create().resource(q).conditional()
                 .where(Questionnaire.URL.matches().value(q.url))
@@ -234,9 +219,63 @@ suspend fun main(args: Array<String>) {
     }
 }
 
+private fun uploadBundleEntries(
+    bundle: Bundle,
+    queueItem: CompassDownloader.QueueItem,
+    client: IGenericClient
+) {
+    var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it
+    for ((index, entry) in bundle.entry.withIndex()) {
+        if (entry.resource !is Questionnaire && entry.resource !is Device && entry.resource !is Organization) {
+            try {
+                printAndFlush("    $index: ${entry.resource.meta.profile.joinToString(", ") { it.value }}")
+                if (entry.resource is Patient) {
+                    val patient = entry.resource as Patient
+
+                    patient.identifier.add(Identifier().apply {
+                        system = COMPASS_SUBJECT_ID
+                        value = queueItem.SubjectId
+                    })
+                    val outcome = client.create().resource(patient).conditional().where(
+                        Patient.IDENTIFIER.exactly().systemAndIdentifier(COMPASS_SUBJECT_ID, queueItem.SubjectId)
+                    ).execute()
+                    print(" => " + outcome.id)
+                    newPatientReference = Reference(outcome.id)
+
+                } else {
+                    changePatientId(entry.resource, newPatientReference!!)
+                    val outcome = client.create().resource(entry.resource).execute()
+                    print(" => " + outcome.id)
+                }
+                println(" DONE")
+            } catch (e: Exception) {
+                println()
+                println("Cannot upload ${entry.resource}: $e")
+                println(parser.encodeResourceToString(entry.resource))
+                println()
+            }
+        }
+    }
+}
+
+fun changePatientId(resource: Resource, newPatientId: Reference) {
+    when (resource) {
+        is Observation -> resource.subject = newPatientId
+        is Condition -> resource.subject = newPatientId
+        is Immunization -> resource.patient = newPatientId
+        is Consent -> resource.patient = newPatientId
+        is Procedure -> resource.subject = newPatientId
+        is QuestionnaireResponse -> resource.subject = newPatientId
+        is MedicationStatement -> resource.subject = newPatientId
+        is DiagnosticReport -> resource.subject = newPatientId
+        else -> error("Unknown resource type '${resource.resourceType}'. Cannot change subject/patient reference!")
+    }
+
+}
+
 
 fun wrapProgress(message: String, block: () -> Unit) {
-    print("  $message...")
+    printAndFlush("  $message...")
     try {
         block()
     } catch (e: Exception) {
