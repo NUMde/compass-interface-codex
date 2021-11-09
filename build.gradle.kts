@@ -45,30 +45,3 @@ tasks.withType<KotlinCompile> {
 application {
     mainClassName = "MainKt"
 }
-
-val imiUser: String? by project
-val imiPassword: String? by project
-if(imiUser == null || imiPassword == null) {
-    throw Exception("Please add gradle.properties file to your ~/.gradle folder and define imiUser and imiPassword there!")
-}
-
-
-publishing {
-
-    publications {
-        create<MavenPublication>("kotlin") {
-            from(components["kotlin"])
-        }
-    }
-
-    repositories {
-        maven {
-            name = "Test"//test
-            url = uri("https://mvn.uni-muenster.de:443/artifactory/imi-test/")
-            credentials {
-                username = imiUser
-                password = imiPassword
-            }
-        }
-    }
-}
