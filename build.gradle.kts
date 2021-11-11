@@ -43,5 +43,5 @@ tasks.withType<KotlinCompile> {
 }
 
 application {
-    mainClassName = "MainKt"
+    mainClassName = (project.properties["mainClass"] ?: "MainKt") as String
 }
