@@ -1,15 +1,19 @@
 # compass-interface-codex
-In short: This is the interface between NUM-Compass (which uses [FHIR Questionnaires](http://hl7.org/fhir/questionnaire.html)) 
-and NUM-CODEX RDP platform (which uses the [FHIR GECCO Profiles](https://simplifier.net/guide/germancoronaconsensusdataset-implementationguide/home)).
+In short: This is the interface between NUM-Compass (which
+uses [FHIR Questionnaires](http://hl7.org/fhir/questionnaire.html))
+and [NUM-CODEX RDP](https://www.netzwerk-universitaetsmedizin.de/projekte/codex) platform (which uses
+the [FHIR GECCO Profiles](https://simplifier.net/guide/germancoronaconsensusdataset-implementationguide/home)).
 
 ![](docs/Transform.png)
 
 This project consists of three components, which can also be used on their own:
 
-* **compass-download-kotlin**: A JVM implementation, that basically does the same as the [Python downloader](https://github.com/NUMde/compass-numapp-downloader). It downloads and decrypted the queue items from the backend.
-* **gecco-easy**: A set of template functions, that can be used to fill easier the GECCO profiles.
-* **gecco-questionnaire**: Defines a logical model for gecco and creates the reference Questionnaire from that, also contains code 
-to extract the GECCO Profiles from the logical model.
+* [**compass-download-kotlin**](./compass-download-kotlin): A JVM implementation, that basically does the same as
+  the [Python downloader](https://github.com/NUMde/compass-numapp-downloader). It downloads and decrypted the queue
+  items from the backend.
+* [**gecco-easy**](./gecco-easy): A set of template functions, that can be used to fill easier the GECCO profiles.
+* [**gecco-questionnaire**](./gecco-questionnaire): Defines a logical model for gecco and creates the reference
+  Questionnaire from that, also contains code to extract the GECCO Profiles from the logical model.
 
 ![](docs/Compass-Pipeline-Complete-white.png)
   
@@ -109,9 +113,10 @@ The direct transfer to the CODEX platform is not yet supported as there are curr
 working on that.
 
 ## Custom scenarios
+
 To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this
 repository and edit `src/main/kotlin/custom-main.kt`. To execute, you could use either the IDE or the command
-`.\gradlew :run -PmainClass=Custom_mainKt --args='your args go here if any'`. If you want to create an executable .jar,
+`./gradlew :run -PmainClass=Custom_mainKt --args='your args go here if any'`. If you want to create an executable .jar,
 run `./gradlew shadowJar` after renaming your `custom-main.kt` to `main.kt`.
 
 # Current limitations
