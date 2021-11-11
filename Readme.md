@@ -25,8 +25,6 @@ as a temporary solution, this component will copy the extensions from the Questi
 
 The extension is used to fill the LogicalModel, the LogicalModel can be converted into a Bundle of FHIR resources conforming to the GECCO profiles.
 
-
-
 ## Usage
 ### IMPORTANT HINT
 ⚠You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than
@@ -104,7 +102,6 @@ create a
 [transaction-Bundle](https://www.hl7.org/fhir/bundle.html#transaction) containing only the GECCO resources instead.
 
 ## ehrbase & fhir-bridge
-
 If you want to use the [fhir-bridge](https://github.com/ehrbase/fhir-bridge) endpoint instead of a traditional FHIR
 repository, please use only the `--uploadBundleEntries` and the `--noComposition` option.
 
@@ -112,17 +109,16 @@ The direct transfer to the CODEX platform is not yet supported as there are curr
 working on that.
 
 ## Custom scenarios
-
 To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this
-repository and edit `src/main/kotlin/custom-main.kt`. If you want to create an executable .jar,
+repository and edit `src/main/kotlin/custom-main.kt`. To execute, you could use either the IDE or the command
+`.\gradlew :run -PmainClass=Custom_mainKt --args='your args go here if any'`. If you want to create an executable .jar,
 run `./gradlew shadowJar` after renaming your `custom-main.kt` to `main.kt`.
 
 # Current limitations
-
 Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are
 currently not supported.
 
-# Special cases in the logical model
+# Special cases in the LogicalModel
 * `demographics.ageInYears`, `demographics.ageInMonth` and `demographics.birthDate` are interchangeable, just ask for one 
   value in the Questionnaire, the other values will be calculated.
 * if `anamnesis.hasChronicLungDiseases`, `anamnesis.hasCardiovascularDiseases`, `anamnesis.hasChronicLiverDiseases`, ..., 
