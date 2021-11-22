@@ -1110,11 +1110,31 @@ enum class VentilationTypes(val status: Procedure.ProcedureStatus,val code: Codi
 }
 
 enum class Covid19Vaccine(override val coding: Coding, val snomed: Coding):CodeableEnum<Covid19Vaccine> {
-	COMIRNATY(Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "COMIRNATY", "Comirnaty® BioNTech/Pfizer"),
-	snomed("1119349007", "Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 messenger ribonucleic acid (medicinal product)")),
-	MODERNA(Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "MODERNA", "COVID-19 Vaccine Moderna®"), snomed("1119349007", "Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 messenger ribonucleic acid (medicinal product)")),
-	VAXZEVRIA(Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "VAXZEVRIA", "Vaxzevria® AstraZeneca"),
-		snomed("1119305005", "Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 antigen (medicinal product)")),
+	COMIRNATY(
+		Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "COMIRNATY", "Comirnaty® BioNTech/Pfizer"),
+		snomed(
+			"1119349007",
+			"Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 messenger ribonucleic acid (medicinal product)"
+		)
+	),
+	MODERNA(
+		Coding(
+			"https://num-compass.science/fhir/CodeSystem/Covid19Vaccine",
+			"MODERNA",
+			"Spikevax COVID-19 Vaccine Moderna®"
+		),
+		snomed(
+			"1119349007",
+			"Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 messenger ribonucleic acid (medicinal product)"
+		)
+	),
+	VAXZEVRIA(
+		Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "VAXZEVRIA", "Vaxzevria® AstraZeneca"),
+		snomed(
+			"1119305005",
+			"Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 antigen (medicinal product)"
+		)
+	),
 	JANSSEN(Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine","JANSSEN", "Janssen® Johnson & Johnson"),
 		snomed("1119305005", "Vaccine product containing only Severe acute respiratory syndrome coronavirus 2 antigen (medicinal product)"))
 
