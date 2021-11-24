@@ -135,9 +135,9 @@ class CompassDownloader(
         val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
         val currentDate = LocalDateTime.now().format(formatter)
 
-        val creds = Json.encodeToString(CredentialsPayload(apiID, apiKey, currentDate))
-        log.trace { "retrieveAccessToken(): Secret Message: $creds " }
-        val aesEncrypted = aesEncrypt(creds.toByteArray(StandardCharsets.UTF_8))
+        val credentials = Json.encodeToString(CredentialsPayload(apiID, apiKey, currentDate))
+        log.trace { "retrieveAccessToken(): Secret Message: $credentials " }
+        val aesEncrypted = aesEncrypt(credentials.toByteArray(StandardCharsets.UTF_8))
         val encoder = Base64.getEncoder()
         val encodedCipherText = String(encoder.encode(aesEncrypted.cipherText), StandardCharsets.UTF_8)
         val encodedKey = String(encoder.encode(aesEncrypted.key.encoded), StandardCharsets.UTF_8)
@@ -287,7 +287,7 @@ class CompassDownloader(
         val list = mutableListOf<QueueItem>()
         list.addAll(Json.decodeFromString(jsonPayload))
 
-        for (i in response.totalPages + 1..response.totalPages) {
+        for (i in (response.currentPage + 1)..response.totalPages) {
             val response = loadQueueItemsByPage(i, accessToken)
             val jsonPayload = verifyJWTAndDecode(response.cTransferList)
             list.addAll(Json.decodeFromString(jsonPayload))
@@ -328,8 +328,8 @@ class CompassDownloader(
         val body: JsonElement
     ) {
         val bodyAsString = when (body) {
-            is JsonPrimitive -> body.content // IBM: String
-            else -> body.toString() // Data4Life: JSON-Object
+            is JsonPrimitive -> body.content // IBM / react-native app: String
+            else -> body.toString() // Data4Life / web app: JSON-Object
         }
     }
 
