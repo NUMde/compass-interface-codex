@@ -10,7 +10,7 @@ fun main() {
 //    val questionnaire = toQuestionnaire()
     val jsonParser = FhirContext.forR4().newJsonParser().setPrettyPrint(true)
     val questionnaire =
-        jsonParser.parseResource(FileReader("C:\\Users\\oehmj\\IdeaProjects\\compass-interface-codex\\questionnaire.json")) as Questionnaire
+        jsonParser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
     val qr = generateResponse(questionnaire)
     addExtensions(qr, questionnaire)
     jsonParser.encodeResourceToWriter(qr, System.out.writer())
