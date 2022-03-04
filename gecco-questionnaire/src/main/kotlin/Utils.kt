@@ -20,6 +20,13 @@ val Questionnaire.allItems: List<QItem>
 val QItem.allItems: List<QItem>
     get() = this.item + this.item.flatMap { it.allItems }
 
+val QuestionnaireResponse.allItems: List<QRItem>
+    get() = this.item + this.item.flatMap { it.allItems }
+
+val QRItem.allItems: List<QRItem>
+    get() = this.item + this.item.flatMap { it.allItems }
+
+
 fun LocalDate.toFhir() = DateType(this.year, this.monthValue, this.dayOfMonth)
 
 fun LocalDate.toUtilDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())

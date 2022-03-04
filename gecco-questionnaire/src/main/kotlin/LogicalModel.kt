@@ -197,7 +197,8 @@ data class Anamnesis(
     @Text("Reiseaktivität in den letzten 14 Tagen?")
     var hasTravelled: YesNoUnknown? = null,
     @Text("In welche Länder reiste der Patient?") @EnableWhenYes("anamnesis.hasTravelled")
-    var historyOfTravel: AnamnesisHistoryOfTravel? = null,
+    var historyOfTravel: AnamnesisHistoryOfTravel? = AnamnesisHistoryOfTravel(),
+    //war vorher default null
 
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/gastrointestinal-ulcers")
     @Text("Leidet der/die Patient*in an Magengeschwüren?")
@@ -366,7 +367,7 @@ data class AnamnesisHistoryOfTravel(
     @Text("Von")
     var from: LocalDate? = null,
     @Text("Bis")
-    val till: LocalDate? = null,
+    var till: LocalDate? = null,
     @Text("Land") @ComboBox
     var country: Countries? = null,
     @Text("Bundesland") @ComboBox @EnableWhen("anamnesis.historyOfTravel.country", "urn:iso:std:iso:3166", "DE")
@@ -384,27 +385,27 @@ data class AnamnesisImmunizationStatus(
     @Text("BCG")
     var bcg: YesNoUnknownWithDate? = null,
     @Text("Covid-19: 1. Impfung")
-    var covid19_first: Covid19Vaccination? = null,
+    var covid19_first: Covid19Vaccination? = Covid19Vaccination(),
     @Text("Covid-19: 2. Impfung") @EnableWhenYes("anamnesis.immunizationStatus.covid19_first.status")
-    var covid19_second: Covid19Vaccination? = null,
+    var covid19_second: Covid19Vaccination? = Covid19Vaccination(),
     @Text("Covid-19: 3. Impfung") @EnableWhenYes("anamnesis.immunizationStatus.covid19_second.status")
-    var covid19_third: Covid19Vaccination? = null
+    var covid19_third: Covid19Vaccination? = Covid19Vaccination()
 )
 
 data class Covid19Vaccination(
     @Text("Status")
-    val status: YesNoUnknown? = null,
+    var status: YesNoUnknown? = null,
     @Text("Zeitpunkt der Impfung")
-    val date: LocalDate? = null,
+    var date: LocalDate? = null,
     @Text("Impfstoff")
-    val vaccine: Covid19Vaccine? = null
+    var vaccine: Covid19Vaccine? = null
 )
 
 data class Imaging(
     @Text("Wurden Bildgebungsverfahren der Lunge im Rahmen von Covid-19 durchgeführt (CT,Röntgen,Ultrashall)? ")
     var hasHadImagingProcedures: YesNoUnknown? = null,
     @Text("Welche Bildgebungsverfahren wurden durchgeführt?") @EnableWhenYes("imaging.hasHadImagingProcedures")
-    var imagingProcedures: ImagingProcedures? = null,
+    var imagingProcedures: ImagingProcedures? = ImagingProcedures(),
 
     @Text("Liegt ein Befund bildgebender Verfahren im Rahmen von Covid-19 vor?")
     var hasRadiologicalFindings: YesNoUnknown? = null,

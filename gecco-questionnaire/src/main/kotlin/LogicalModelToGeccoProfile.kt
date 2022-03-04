@@ -14,10 +14,14 @@ import java.time.Period as JodaPeriod
 fun main() {
     val ctx = FhirContext.forR4()
     val parser = ctx.newJsonParser().setPrettyPrint(true)
+
+    val questionnaire =
+        parser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
+
     val fileContent = LogicalModel::class.java.getResource("/generated-response.json").readText()
     val qr = parser.parseResource(fileContent) as QuestionnaireResponse
     addExtensions(qr, toQuestionnaire())
-    val logicalModel = toLogicalModel(qr)
+    val logicalModel = toLogicalModel(questionnaire, qr)
     println(logicalModel.toString())
     val q =
         parser.parseResource(FileReader("C:\\Users\\oehmj\\IdeaProjects\\gecco-questionnaire\\questionnaire.json")) as Questionnaire
@@ -1104,7 +1108,7 @@ private fun GeccoBundleBuilder.addCovid19Vaccine(logicalModel: Covid19Vaccinatio
     if (logicalModel != null && logicalModel.status == YesNoUnknown.YES) {
         val vaccineDate = logicalModel.date?.let { DateTimeType(it.toUtilDate()) } ?: unknownDateTime()
         if (logicalModel.vaccine != null) {
-            add(VaccinationCovid19(patientRef, logicalModel.vaccine, vaccineDate))
+            add(VaccinationCovid19(patientRef,  logicalModel.vaccine as Covid19Vaccine, vaccineDate))
         }
     }
 }
