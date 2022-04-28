@@ -163,7 +163,7 @@ suspend fun main(args: Array<String>) {
                 println("SUCCESS")
             }
 
-            val logicalModel = toLogicalModel(qr)
+            val logicalModel = toLogicalModel(questionnaire, qr)
             printAndFlush("  Mapping to GECCO resources... ")
             val bundleBuilder = if (parsedArgs.simple) {
                 TransactionBundleBuilder()
@@ -221,7 +221,7 @@ suspend fun main(args: Array<String>) {
 
 private fun uploadBundleEntries(
     bundle: Bundle,
-    queueItem: CompassDownloader.QueueItem,
+    queueItem: QueueItem,
     client: IGenericClient
 ) {
     var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it

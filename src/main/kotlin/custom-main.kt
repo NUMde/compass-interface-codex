@@ -1,15 +1,8 @@
-import ca.uhn.fhir.context.FhirContext
-import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor
-import org.hl7.fhir.r4.model.*
-import java.io.File
-import java.io.FileWriter
-
-
 /**
  * This is a sample main function, which shows you the basic usage and how you can use this to create your own converter
  * for your own project.
  */
-suspend fun main(args: Array<String>) {
+/*suspend fun main(args: Array<String>) {
     val ctx = FhirContext.forR4()
     val parser = ctx.newJsonParser().setPrettyPrint(true)
 
@@ -83,3 +76,4 @@ val QRItem.allItems: List<QRItem>
     get() = this.item + this.item.flatMap { it.allItems }
 
 operator fun QuestionnaireResponse.get(linkId: String) = this.allItems.find { it.linkId == linkId }
+*/

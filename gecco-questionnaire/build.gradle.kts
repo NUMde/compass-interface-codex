@@ -11,7 +11,7 @@ repositories {
 }
 
 
-val hapiVersion = "5.4.2"
+val hapiVersion: String by project
 
 dependencies {
     implementation(kotlin("stdlib"))

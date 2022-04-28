@@ -1,0 +1,317 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://medical-data-models.org/44450",
+  "version": "1.0",
+  "title": "Well-being and COVID-19; ",
+  "status": "active",
+  "date": "2021-09-23T10:39:07+02:00",
+  "description": "This is short version for demonstration of the compass-app a combination of the demography form of GECCO and the WHO-5 well-being index.",
+  "item": [
+    {
+      "linkId": "1",
+      "text": "Demographie",
+      "type": "group",
+      "repeats": false,
+      "item": [
+        {
+          "linkId": "1.1",
+          "text": "Demographie",
+          "type": "group",
+          "repeats": false,
+          "item": [
+            {
+              "extension": [
+                {
+                  "url": "https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem",
+                  "valueCoding": {
+                    "system": "https://num-compass.science/fhir/CodeSystem/CompassGeccoItem",
+                    "version": "1.0",
+                    "code": "demographics.biologicalSex"
+                  }
+                }
+              ],
+              "linkId": "1.1.1",
+              "text": "Biologisches Geschlecht",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "system": "http://hl7.org/fhir/administrative-gender",
+                    "code": "male",
+                    "display": "Männlich"
+                  }
+                }, {
+                  "valueCoding": {
+                    "system": "http://hl7.org/fhir/administrative-gender",
+                    "code": "female",
+                    "display": "Weiblich"
+                  }
+                }, {
+                  "valueCoding": {
+                    "system": "http://fhir.de/CodeSystem/gender-amtlich-de",
+                    "code": "X",
+                    "display": "unbestimmt"
+                  }
+                }, {
+                  "valueCoding": {
+                    "system": "http://fhir.de/CodeSystem/gender-amtlich-de",
+                    "code": "D",
+                    "display": "Divers"
+                  }
+                }, {
+                  "valueCoding": {
+                    "system": "http://hl7.org/fhir/administrative-gender",
+                    "code": "unknown",
+                    "display": "keine Angabe"
+                  }
+                }
+              ]
+            }, {
+              "extension": [
+                {
+                  "url": "https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem",
+                  "valueCoding": {
+                    "system": "https://num-compass.science/fhir/CodeSystem/CompassGeccoItem",
+                    "version": "1.0",
+                    "code": "demographics.dateOfBirth"
+                  }
+                }
+              ],
+              "linkId": "1.1.2",
+              "text": "Geburtsdatum",
+              "type": "date",
+              "required": false
+            }, {
+              "extension": [
+                {
+                  "url": "https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem",
+                  "valueCoding": {
+                    "system": "https://num-compass.science/fhir/CodeSystem/CompassGeccoItem",
+                    "version": "1.0",
+                    "code": "demographics.bodyHeight"
+                  }
+                }
+              ],
+              "linkId": "1.1.3",
+              "text": "Körpergröße",
+              "type": "decimal",
+              "required": false
+            }, {
+              "linkId": "1.1.4",
+              "text": "Anmerkungen",
+              "type": "text",
+              "required": false
+            }
+          ]
+        }
+      ]
+    }, {
+      "linkId": "2",
+      "text": "WHO-5 Well-being index",
+      "type": "group",
+      "repeats": false,
+      "item": [
+        {
+          "linkId": "2.1",
+          "text": "In den letzten zwei Wochen ...",
+          "type": "group",
+          "repeats": false,
+          "item": [
+            {
+              "linkId": "2.1.1",
+              "text": " war ich froh und guter Laune",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "code": "urn:uuid:8d049923-b2d2-4e33-a0f7-35859c78c892",
+                    "display": "Die ganze Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:9ec8263a-b5a4-47a1-91b9-e84b7f6830a0",
+                    "display": "Meistens"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:0120641d-7351-425a-8e8b-c7ffd296c701",
+                    "display": "Etwas mehr als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:95136105-ddc4-45fc-878e-93e572006cd9",
+                    "display": "Etwas weniger als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:95645abb-b12f-43b3-8757-95ca9251ddc5",
+                    "display": "Ab und zu"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:21eafefc-e1b3-483d-9ef8-32bfac082d5d",
+                    "display": "Zu keinem Zeitpunkt"
+                  }
+                }
+              ]
+            }, {
+              "linkId": "2.1.2",
+              "text": " habe ich mich ruhig und entspannt gefühlt",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "code": "urn:uuid:07658529-0ec4-48ea-98f5-fb1e22244181",
+                    "display": "Die ganze Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:dc577888-b499-406c-b5f2-e28906681491",
+                    "display": "Meistens"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:ce6ef061-671b-466b-8bf4-617ba9a6f0de",
+                    "display": "Etwas mehr als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:8de939ca-dcda-4c11-90ee-4b0599286055",
+                    "display": "Etwas weniger als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:bad0425c-c1b4-470b-a4c8-8d40b2df61e6",
+                    "display": "Ab und zu"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:4bbd9ff5-7f4a-4916-a6d2-100792591c8d",
+                    "display": "Zu keinem Zeitpunkt"
+                  }
+                }
+              ]
+            }, {
+              "linkId": "2.1.3",
+              "text": " habe ich mich energisch und aktiv gefühlt",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "code": "urn:uuid:3adb1ec2-ece9-4496-9e2d-c0c7a9408f21",
+                    "display": "Die ganze Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:38256713-a080-46bb-a772-48db772533a7",
+                    "display": "Meistens"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:19dbff76-b8a9-47fe-b938-41743b8a770f",
+                    "display": "Etwas mehr als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:9e618e42-47cb-493d-8ccc-fa9074952b08",
+                    "display": "Etwas weniger als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:9d3f5ce6-bd73-40e4-afb3-9af94f5aa4e1",
+                    "display": "Ab und zu"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:5f3d7998-85ef-4305-ab30-5ed5518abfd6",
+                    "display": "Zu keinem Zeitpunkt"
+                  }
+                }
+              ]
+            }, {
+              "linkId": "2.1.4",
+              "text": " habe ich mich beim Aufwachen frisch und ausgeruht gefühlt",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "code": "urn:uuid:d74346fa-b41f-48a7-95b2-a52c255eac0c",
+                    "display": "Die ganze Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:cb47e5eb-7401-4ed4-a200-a898e137b87a",
+                    "display": "Meistens"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:21c2eaec-b976-40bb-ad33-8e1d83e4a206",
+                    "display": "Etwas mehr als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:cc3388f9-e461-4bae-9b8c-cc7bc8c83aa0",
+                    "display": "Etwas weniger als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:00990cf9-d9da-409d-a2c2-c5d3c5731241",
+                    "display": "Ab und zu"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:0236f775-5ad9-4cbf-8d32-cda7cc7847f3",
+                    "display": "Zu keinem Zeitpunkt"
+                  }
+                }
+              ]
+            }, {
+              "linkId": "2.1.5",
+              "text": " war mein Alltag voller Dinge, die mich interessieren",
+              "type": "choice",
+              "required": false,
+              "answerOption": [
+                {
+                  "valueCoding": {
+                    "code": "urn:uuid:c32b9e9b-7dc8-4a57-9275-522bdf9eb944",
+                    "display": "Die ganze Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:45640312-7df2-486d-a2cd-4afdfa25a384",
+                    "display": "Meistens"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:ca27998b-6924-4a96-9291-798105e9f08a",
+                    "display": "Etwas mehr als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:28347c82-696f-49d6-9779-9207aafef8e6",
+                    "display": "Etwas weniger als die Hälfte der Zeit"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:7592fe13-8e15-4c48-82b2-d5d14a4956da",
+                    "display": "Ab und zu"
+                  }
+                }, {
+                  "valueCoding": {
+                    "code": "urn:uuid:e6c84f7c-7d7d-4e78-873a-3e05240ef0b6",
+                    "display": "Zu keinem Zeitpunkt"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

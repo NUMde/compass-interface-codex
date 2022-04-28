@@ -121,14 +121,6 @@ class CompassDownloader(
     }
 
 
-    @Serializable
-    data class CredentialsPayload(val ApiID: String, val ApiKey: String, val CurrentDate: String)
-
-    @Serializable
-    data class AuthBody(val encrypted_creds: String, val encrypted_key: String, val iv: String)
-
-    @Serializable
-    data class TokenResponse(val access_token: String)
 
 
     suspend fun retrieveAccessToken(): String {
@@ -157,13 +149,6 @@ class CompassDownloader(
         return response.access_token
     }
 
-    @Serializable
-    data class QueuePageResponse(
-        val totalEntries: Int,
-        val totalPages: Int,
-        val currentPage: Int,
-        val cTransferList: String
-    )
 
     suspend fun loadQueueItemsByPage(page: Int, access_token: String): QueuePageResponse {
         val pageResponse = client.get<QueuePageResponse> {
@@ -270,14 +255,6 @@ class CompassDownloader(
         return recipientInfo.getContent(recipient)
     }
 
-    @Serializable
-    data class QueueItem(
-        val UUID: String,
-        val SubjectId: String,
-        val JSON: String,
-        val AbsendeDatum: String,
-        val ErhaltenDatum: String
-    )
 
     suspend fun retrieveAllQueueItems(): MutableList<QueueItem> {
         val accessToken = retrieveAccessToken()
@@ -316,21 +293,59 @@ class CompassDownloader(
         return decryptedBytes.decodeToString()
     }
 
-    @Serializable
-    data class DecryptedQueueItem(
-        val type: String, //"questionnaire_response"
-        val data: DecryptedQueueItemData
-    )
 
-    @Serializable
-    data class DecryptedQueueItemData(
-        val subjectId: String,
-        val body: JsonElement
-    ) {
-        val bodyAsString = when (body) {
-            is JsonPrimitive -> body.content // IBM / react-native app: String
-            else -> body.toString() // Data4Life / web app: JSON-Object
-        }
+}
+
+fun proguardKeep() {
+    CredentialsPayload.serializer()
+    AuthBody.serializer()
+    TokenResponse.serializer()
+    QueueItem.serializer()
+    QueuePageResponse.serializer()
+    DecryptedQueueItem.serializer()
+    DecryptedQueueItemData.serializer()
+}
+
+@Serializable
+data class CredentialsPayload(val ApiID: String, val ApiKey: String, val CurrentDate: String)
+
+@Serializable
+data class AuthBody(val encrypted_creds: String, val encrypted_key: String, val iv: String)
+
+@Serializable
+data class TokenResponse(val access_token: String)
+
+@Serializable
+data class QueueItem(
+    val UUID: String,
+    val SubjectId: String,
+    val JSON: String,
+    val AbsendeDatum: String,
+    val ErhaltenDatum: String
+)
+
+@Serializable
+data class QueuePageResponse(
+    val totalEntries: Int,
+    val totalPages: Int,
+    val currentPage: Int,
+    val cTransferList: String
+)
+
+
+@Serializable
+data class DecryptedQueueItem(
+    val type: String, //"questionnaire_response"
+    val data: DecryptedQueueItemData
+)
+
+@Serializable
+data class DecryptedQueueItemData(
+    val subjectId: String,
+    val body: JsonElement
+) {
+    val bodyAsString = when (body) {
+        is JsonPrimitive -> body.content // IBM / react-native app: String
+        else -> body.toString() // Data4Life / web app: JSON-Object
     }
-
 }
