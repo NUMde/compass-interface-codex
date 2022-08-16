@@ -319,6 +319,8 @@ data class TokenResponse(val access_token: String)
 data class QueueItem(
     val UUID: String,
     val SubjectId: String,
+    val QuestionnaireId: String? = null,
+    val Version: String? = null,
     val JSON: String,
     val AbsendeDatum: String,
     val ErhaltenDatum: String
