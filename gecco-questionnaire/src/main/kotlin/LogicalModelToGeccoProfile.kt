@@ -571,6 +571,7 @@ fun logicalModelToGeccoProfile(
                              add(AnaDiabetes(patientRef, Diabetes.TYPE2_INSULIN, YesNoUnknown.NO, recordedDate))
                              add(AnaDiabetes(patientRef, Diabetes.TYPE3, YesNoUnknown.YES, recordedDate))
                          }
+                         else -> {}
                      }
 
                  }
@@ -726,6 +727,7 @@ fun logicalModelToGeccoProfile(
                     ))
                 YesNoUnknown.NO -> add(AnaHistoryOfTravel(patientRef, YesNoUnknownOtherNa.NO))
                 YesNoUnknown.UNKNOWN -> add(AnaHistoryOfTravel(patientRef, YesNoUnknownOtherNa.UNKNOWN))
+                null -> {}
             }
         }
 

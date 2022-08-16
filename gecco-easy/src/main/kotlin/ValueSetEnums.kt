@@ -42,10 +42,11 @@ enum class EthnicGroup(override val coding: Coding): CodeableEnum<EthnicGroup> {
 	HISPANIC_OR_LATINO(Coding("urn:oid:2.16.840.1.113883.6.238", "2135-2", "Hispanic or Latino")),
 }
 
-enum class BirthSex(override val coding: Coding): CodeableEnum<EthnicGroup> {
+enum class BirthSex(override val coding: Coding) : CodeableEnum<BirthSex> {
 	MALE(Coding("http://hl7.org/fhir/administrative-gender", "male", "Male")),
 	FEMALE(Coding("http://hl7.org/fhir/administrative-gender", "female", "Female")),
-//	OTHER(Coding("http://hl7.org/fhir/administrative-gender", "other", "Other")),
+
+	//	OTHER(Coding("http://hl7.org/fhir/administrative-gender", "other", "Other")),
 	UNKNOWN(Coding("http://hl7.org/fhir/administrative-gender", "unknown", "Unknown")),
 	X(Coding("http://fhir.de/CodeSystem/gender-amtlich-de", "X", "unbestimmt")),
 	D(Coding("http://fhir.de/CodeSystem/gender-amtlich-de", "D", "divers")),
