@@ -2,6 +2,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -34,8 +35,9 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 object PemUtils {
-    fun loadPrivateKey(privateKeyFile: File): PrivateKey {
-        val privateKeyContent = privateKeyFile.readText().replace("\n", "").replace("\r", "")
+    fun loadPrivateKey(privateKeyFile: File): PrivateKey = loadPrivateKey(privateKeyFile.readText())
+    fun loadPrivateKey(privateKeyFile: String): PrivateKey {
+        val privateKeyContent = privateKeyFile.replace("\n", "").replace("\r", "")
             .replace("-----BEGIN PRIVATE KEY-----", "")
             .replace("-----END PRIVATE KEY-----", "")
 
@@ -44,8 +46,10 @@ object PemUtils {
         return kf.generatePrivate(keySpecPKCS8)
     }
 
-    fun loadPublicKey(publicKeyFile: File): RSAPublicKey {
-        val publicKeyContent = publicKeyFile.readText().replace("\n", "").replace("\r", "")
+    fun loadPublicKey(publicKeyFile: File): RSAPublicKey = loadPublicKey(publicKeyFile.readText())
+
+    fun loadPublicKey(publicKeyFile: String): RSAPublicKey {
+        val publicKeyContent = publicKeyFile.replace("\n", "").replace("\r", "")
             .replace("-----BEGIN PUBLIC KEY-----", "")
             .replace("-----END PUBLIC KEY-----", "")
 
@@ -58,13 +62,18 @@ object PemUtils {
         return CertificateFactory.getInstance("X.509").generateCertificate(certFile.inputStream()) as X509Certificate
     }
 
+    fun loadCert(certFile: String): X509Certificate {
+        return CertificateFactory.getInstance("X.509")
+            .generateCertificate(certFile.byteInputStream()) as X509Certificate
+    }
+
 }
 
 
 class CompassDownloader(
-    private val serverUrl: String = "http://127.0.0.1:8080/",
-    private val apiID: String = "test",
-    private val apiKey: String = "gKdKLYG2g0-Y1EllI0-W",
+    private var serverUrl: String,
+    private val apiID: String,
+    private val apiKey: String,
     private val privateKey: PrivateKey,
     private val publicKey: RSAPublicKey,
     private val cert: X509Certificate,
@@ -79,11 +88,16 @@ class CompassDownloader(
                 isLenient = true
             })
         }
+        install(Logging) {
+            logger = Logger.DEFAULT
+            level = LogLevel.NONE
+        }
     }
 
 
     init {
         Security.addProvider(BouncyCastleProvider())
+        serverUrl = serverUrl.removeSuffix("/")
     }
 
 
@@ -140,7 +154,7 @@ class CompassDownloader(
         val base64RsaKeyString = String(encoder.encode(rsaEncryptedKey), StandardCharsets.UTF_8)
         log.trace { "retrieveAccessToken(): RSA-encrypted and base64-encoded key: $base64RsaKeyString" }
 
-        val response: TokenResponse = client.post("${serverUrl.removeSuffix("/")}/api/auth/") {
+        val response: TokenResponse = client.post("$serverUrl/api/auth/") {
             contentType(ContentType.Application.Json)
             setBody(AuthBody(encodedCipherText, base64RsaKeyString, encodedIv))
         }.body()
@@ -150,7 +164,7 @@ class CompassDownloader(
 
 
     suspend fun loadQueueItemsByPage(page: Int, access_token: String): QueuePageResponse {
-        val pageResponse: QueuePageResponse = client.get("${serverUrl.removeSuffix("/")}/api/download") {
+        val pageResponse: QueuePageResponse = client.get("$serverUrl/api/download") {
             parameter("page", page)
             header("Authorization", "Bearer $access_token")
         }.body()
@@ -158,7 +172,7 @@ class CompassDownloader(
     }
 
     suspend fun retrieveQuestionnaireStringByUrlAndVersion(url: String, version: String, access_token: String): String {
-        return client.get("${serverUrl.removeSuffix("/")}/api/questionnaire") {
+        return client.get("$serverUrl/api/questionnaire") {
             parameter("url", url)
             parameter("version", version)
             header("Authorization", "Bearer $access_token")
@@ -167,7 +181,7 @@ class CompassDownloader(
 
 
     suspend fun deleteQueueItemsByUuid(uuids: List<String>, access_token: String): Boolean {
-        val pageResponse = client.delete("${serverUrl.removeSuffix("/")}/api/download") {
+        val pageResponse = client.delete("$serverUrl/api/download") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
             setBody(uuids)
@@ -179,7 +193,7 @@ class CompassDownloader(
     suspend fun addQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
         val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
 
-        val pageResponse = client.post("${serverUrl.removeSuffix("/")}/api/questionnaire") {
+        val pageResponse = client.post("$serverUrl/api/questionnaire") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
             setBody(buildJsonObject {
@@ -195,7 +209,7 @@ class CompassDownloader(
     suspend fun updateQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
         val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
 
-        val pageResponse = client.put("${serverUrl.removeSuffix("/")}/api/questionnaire") {
+        val pageResponse = client.put("$serverUrl/api/questionnaire") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
             setBody(buildJsonObject {
@@ -204,6 +218,16 @@ class CompassDownloader(
                 put("version", questionnaireJson["version"]!!.jsonPrimitive.content)
                 put("questionnaire", questionnaireJson)
             })
+        }
+        return pageResponse.status == HttpStatusCode.OK
+    }
+
+
+    suspend fun markCTransferListIdsAsDownloaded(uuids: List<String>, access_token: String): Boolean {
+        val pageResponse = client.put("$serverUrl/api/download") {
+            header("Authorization", "Bearer $access_token")
+            contentType(ContentType.Application.Json)
+            setBody(uuids)
         }
         return pageResponse.status == HttpStatusCode.OK
     }
@@ -250,20 +274,21 @@ class CompassDownloader(
     }
 
 
-    suspend fun retrieveAllQueueItems(): MutableList<QueueItem> {
+    suspend fun retrieveAllQueueItems(): List<QueueItem> {
         val accessToken = retrieveAccessToken()
         val response = loadQueueItemsByPage(1, accessToken)
         val jsonPayload: String = verifyJWTAndDecode(response.cTransferList)
 
-        val list = mutableListOf<QueueItem>()
-        list.addAll(Json.decodeFromString(jsonPayload))
+        return buildList {
+            addAll(Json.decodeFromString(jsonPayload))
 
-        for (i in (response.currentPage + 1)..response.totalPages) {
-            val response = loadQueueItemsByPage(i, accessToken)
-            val jsonPayload = verifyJWTAndDecode(response.cTransferList)
-            list.addAll(Json.decodeFromString(jsonPayload))
+            for (i in (response.currentPage + 1)..response.totalPages) {
+                val response = loadQueueItemsByPage(i, accessToken)
+                val jsonPayload = verifyJWTAndDecode(response.cTransferList)
+                addAll(Json.decodeFromString(jsonPayload))
+            }
         }
-        return list
+
     }
 
     fun decryptQueueItems(queueItems: List<QueueItem>): List<Pair<QueueItem, DecryptedQueueItem>> {
