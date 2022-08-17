@@ -1,10 +1,10 @@
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.apache.*
-import io.ktor.client.features.json.JsonFeature
-import io.ktor.client.features.json.serializer.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -73,8 +73,8 @@ class CompassDownloader(
     private val log = KotlinLogging.logger {}
 
     private val client: HttpClient = HttpClient(Apache) {
-        install(JsonFeature) {
-            serializer = KotlinxSerializer(Json {
+        install(ContentNegotiation) {
+            json(Json {
                 prettyPrint = true
                 isLenient = true
             })
@@ -140,41 +140,37 @@ class CompassDownloader(
         val base64RsaKeyString = String(encoder.encode(rsaEncryptedKey), StandardCharsets.UTF_8)
         log.trace { "retrieveAccessToken(): RSA-encrypted and base64-encoded key: $base64RsaKeyString" }
 
-        val response = client.post<TokenResponse> {
+        val response: TokenResponse = client.post("${serverUrl.removeSuffix("/")}/api/auth/") {
             contentType(ContentType.Application.Json)
-            url("${serverUrl.removeSuffix("/")}/api/auth/")
-            body = AuthBody(encodedCipherText, base64RsaKeyString, encodedIv)
-        }
+            setBody(AuthBody(encodedCipherText, base64RsaKeyString, encodedIv))
+        }.body()
         log.debug { "retrieveAccessToken(): retrieved access token: ${response.access_token}" }
         return response.access_token
     }
 
 
     suspend fun loadQueueItemsByPage(page: Int, access_token: String): QueuePageResponse {
-        val pageResponse = client.get<QueuePageResponse> {
-            url("${serverUrl.removeSuffix("/")}/api/download")
+        val pageResponse: QueuePageResponse = client.get("${serverUrl.removeSuffix("/")}/api/download") {
             parameter("page", page)
             header("Authorization", "Bearer $access_token")
-        }
+        }.body()
         return pageResponse
     }
 
     suspend fun retrieveQuestionnaireStringByUrlAndVersion(url: String, version: String, access_token: String): String {
-        return client.get<JsonObject> {
-            url("${serverUrl.removeSuffix("/")}/api/questionnaire")
+        return client.get("${serverUrl.removeSuffix("/")}/api/questionnaire") {
             parameter("url", url)
             parameter("version", version)
             header("Authorization", "Bearer $access_token")
-        }["body"].toString()
+        }.body<JsonObject>()["body"].toString()
     }
 
 
     suspend fun deleteQueueItemsByUuid(uuids: List<String>, access_token: String): Boolean {
-        val pageResponse = client.delete<HttpResponse> {
-            url("${serverUrl.removeSuffix("/")}/api/download")
+        val pageResponse = client.delete("${serverUrl.removeSuffix("/")}/api/download") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
-            body = uuids
+            setBody(uuids)
         }
         return pageResponse.status == HttpStatusCode.OK
     }
@@ -183,16 +179,15 @@ class CompassDownloader(
     suspend fun addQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
         val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
 
-        val pageResponse = client.post<HttpResponse> {
-            url("${serverUrl.removeSuffix("/")}/api/questionnaire")
+        val pageResponse = client.post("${serverUrl.removeSuffix("/")}/api/questionnaire") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
-            body = buildJsonObject {
+            setBody(buildJsonObject {
                 put("name", name)
                 put("url", questionnaireJson["url"]!!.jsonPrimitive.content)
                 put("version", questionnaireJson["version"]!!.jsonPrimitive.content)
                 put("questionnaire", questionnaireJson)
-            }
+            })
         }
         return pageResponse.status == HttpStatusCode.OK
     }
@@ -200,16 +195,15 @@ class CompassDownloader(
     suspend fun updateQuestionnaire(name: String, questionnaire: String, access_token: String): Boolean {
         val questionnaireJson = Json.parseToJsonElement(questionnaire) as JsonObject
 
-        val pageResponse = client.put<HttpResponse> {
-            url("${serverUrl.removeSuffix("/")}/api/questionnaire")
+        val pageResponse = client.put("${serverUrl.removeSuffix("/")}/api/questionnaire") {
             header("Authorization", "Bearer $access_token")
             contentType(ContentType.Application.Json)
-            body = buildJsonObject {
+            setBody(buildJsonObject {
                 put("name", name)
                 put("url", questionnaireJson["url"]!!.jsonPrimitive.content)
                 put("version", questionnaireJson["version"]!!.jsonPrimitive.content)
                 put("questionnaire", questionnaireJson)
-            }
+            })
         }
         return pageResponse.status == HttpStatusCode.OK
     }

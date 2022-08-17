@@ -9,7 +9,7 @@ plugins {
 val projectVersion: String by project
 group = "de.unimuenster.imi.medic"
 version = projectVersion
-val ktor_version = "1.6.1"
+val ktor_version = "2.0.3"
 
 repositories {
     mavenCentral()
@@ -22,6 +22,8 @@ dependencies {
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-apache:$ktor_version")
     implementation("io.ktor:ktor-client-serialization:$ktor_version")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
 
     implementation("ch.qos.logback", "logback-classic", "1.2.3")
     implementation("io.github.microutils:kotlin-logging:1.7.7")
