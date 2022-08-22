@@ -495,9 +495,9 @@ data class ThromboembolicComplications(
 
 data class YesNoUnknownWithIntent(
     @Text("Wurde das Medikament verabreicht?")
-    val administration: YesNoUnknown? = null,
+    var administration: YesNoUnknown? = null,
     @Text("Mit welcher therapheutischen Absicht das Medikament verarbreicht?")
-    val intent: TherapeuticIntent? = null
+    var intent: TherapeuticIntent? = null
 )
 
 data class OnsetOfIllnessOrAdmission(
