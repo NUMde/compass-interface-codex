@@ -1,67 +1,43 @@
-import Medication as Medi
 import ca.uhn.fhir.context.FhirContext
+import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.hl7.fhir.r4.model.*
 import java.io.FileReader
+import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.*
+import kotlin.collections.HashMap
+import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
-import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaField
-import kotlin.reflect.jvm.javaGetter
 import kotlin.reflect.jvm.javaSetter
-import kotlin.reflect.jvm.jvmErasure
-
+import kotlin.reflect.typeOf
 
 fun main() {
-
     val jsonParser = FhirContext.forR4().newJsonParser().setPrettyPrint(true)
     val questionnaire =
         jsonParser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
-    val qr = generateResponse(questionnaire)
+    val questionnaireResponse = generateResponse(questionnaire)
 
-    var lm = toLogicalModel(questionnaire, qr)
+    val logicalModel = toLogicalModel(questionnaire, questionnaireResponse)
 
-    println(lm)
+    println(logicalModel)
 
 }
 
 fun toLogicalModel(questionnaire: Questionnaire, qr: QuestionnaireResponse): LogicalModel {
-    val mapped = mapByExtension(qr)
     addExtensions(qr, questionnaire)
+    val mapped = mapByExtension(qr).filter {it.value.value != null} as HashMap
+    val processedMap = processMappedCodes(mapped)
 
-    var lm = LogicalModel()
+    val logicalModel = LogicalModel()
 
-    //this function extracts all the values, that have to be extracted separately (usually in a hardcoded way)
-    //the main function to extract does it one value at a time, but there are specific fields which require two or more values at once, meaning they have to be extracted separately
-    lm = extractSpecial(lm, mapped)
-
-    //every element is added one by one if no special treatment is needed
-    for (item in qr.allItems) {
-        val code = (item.getExtensionByUrl(COMPASS_GECCO_ITEM_EXTENSION).value as Coding).code
-
-        //code exclusions here are based on what has to be hardcoded, they will be set null if removed here
-        if (item.answer.isNotEmpty()
-            && (!code.lowercase().contains("symptoms") or code.lowercase().contains("asymptomatic"))
-            && !code.lowercase().contains("immunizationstatus.influenza")
-            && !code.lowercase().contains("immunizationstatus.pneumococcal")
-            && !code.lowercase().contains("immunizationstatus.bcg")
-        ) {
-
-            val value = item.answer[0]
-
-            //just for bugfixing
-            //println("$code - $value - ${value.value}")
-
-            if (value != null) {
-                lm = setValue(lm, code, value)
-            }
-
-        }
-
+    for (item in processedMap) {
+        setValueForCode(logicalModel, item.key, item.value)
     }
-    return lm
+
+    return logicalModel
 }
 
 fun addExtensions(response: QR, questionnaire: Questionnaire) {
@@ -138,7 +114,7 @@ fun toYesNoUnknownOtherNa(value: Type?): YesNoUnknownOtherNa? {
         is Coding -> value.display?.toString()
         else -> null
     }
-    return when (answerValue?.toLowerCase()) {
+    return when (answerValue?.lowercase()) {
         "ja", "yes" -> YesNoUnknownOtherNa.YES
         "nein", "no" -> YesNoUnknownOtherNa.NO
         "andere", "other" -> YesNoUnknownOtherNa.OTHER
@@ -148,276 +124,452 @@ fun toYesNoUnknownOtherNa(value: Type?): YesNoUnknownOtherNa? {
     }
 }
 
-fun findProperty(lm: Any, code: String, prop: KProperty1<out Any, *>, value: QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent, instance: Any): Pair<Any, Boolean> {
-
-    //TODO: typeofdischarge, followupswapresult (there were no from(coding) or toEnums)
-    //TODO: MedicationAnticoagulation (missing intents in Model)
-
-    var found = false
-
-    var inst = instance
-
-    //Gets property instance to write to
-    try {
-        inst = instance.javaClass.kotlin.memberProperties.find { it.name == prop.javaField!!.name }!!.get(instance)!!
-    } catch (e: Exception) {
-        //println("Can't get property instance. Error code: $e")
+fun toDate(value: Type?) : Date? {
+    if (value is DateType) {
+        val format = getSimpleDateFormatterForPrecision(value.precision)
+        return format?.parse(value.valueAsString)
     }
 
-    //This would have to be implemented if a property directly in logicalmodel exists that needs to be provided with a value
-    /*if (prop.toString().lowercase().substringBefore(":") == code.lowercase()) {
-        //set value
-        println("Found $code")
-    }*/
-
-    //going through subproperties of the current property
-    if (prop.javaGetter!!.returnType.kotlin.memberProperties.isNotEmpty()) {
-        for (subprop in prop.javaGetter!!.returnType.kotlin.memberProperties) {
-
-            if ((prop.toString().lowercase().substringAfter("var ").substringBefore(".") in subprop.toString().lowercase().substringAfter("var ").substringBefore(":")) or ("logicalmodel" in prop.toString().lowercase().substringAfter("var ").substringBefore(":").substringBeforeLast("."))) {
-
-                //covid 19 immunization has to be hardcoded, because subproperties of anamnesis containing immunization info are missing anamnesis markers
-                if("anamnesis.immunizationstatus.covid19" in code.lowercase()) {
-                    if (subprop.toString().lowercase().substringAfter("var ").substringBefore(":").replace(".", "") == code.lowercase().substringBeforeLast(".").replace(".", "")) {
-                        for (covProp in subprop.javaGetter!!.returnType.kotlin.memberProperties) {
-                            if (covProp.toString().lowercase().substringAfter(".").substringBefore(":")
-                                in code.lowercase().replace(".", "").substringAfter("covid19_")
-                            ) {
-                                if (covProp is KMutableProperty<*>) {
-                                    try {
-                                        //getting correct property instance, because we are deeper in the LM structure
-                                        inst = inst.javaClass.kotlin.memberProperties.find { it.name == subprop.javaField!!.name }!!.get(inst)!!
-                                        val covValue = value.value
-
-                                        covProp.javaSetter!!.invoke(
-                                            inst, when (covProp.name) {
-                                                in "status" -> toYesNoUnknown(covValue)
-                                                in "date" -> value.toLocalDate()
-                                                in "vaccine" -> value.toEnum1<Covid19Vaccine>()
-                                                else -> null
-                                            }
-                                        )
-                                        found = true
-                                        return Pair(inst, found)
-                                    } catch (e:Exception) {
-                                        println("Could not set covid19 vaccination ${code.substringAfter("status")} property. Error code $e")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                //checks if the code name and name of the current property are the same
-                if ((subprop.toString().lowercase().substringAfter("var ").substringBefore(":").replace(".", "") == code.lowercase().replace(".", ""))
-                    or (subprop.toString().lowercase().substringAfter("var ").substringBefore(":").replace(".", "") == code.lowercase().substringAfter(".").replace(".", ""))
-                    //this is necessary, because laboratoryvalues are mostly stored in an inner class called "laboratoryvalueslaboratoryvalue" but the code is "laboratoryvalues.laboratoryvalues"
-                    or (subprop.toString().lowercase().substringAfter("var ").substringBefore(":").replace(".", "") == "laboratoryvalueslaboratoryvalue" + code.substringAfterLast(".").lowercase())
-                    or (subprop.toString().lowercase().substringAfter("var ").substringBefore(":").replace(".", "") == "medicationanticoagulation" + code.substringAfterLast(".").lowercase())
-                ) {
-                    if (subprop is KMutableProperty<*>) {
-                        //based on what type the property is, the value will be inserted into the instance with the respective function
-                        if (subprop.returnType.toString() == "YesNoUnknown?") {
-                            try {
-                                subprop.javaSetter!!.invoke(inst, toYesNoUnknown(value.value))
-                                //println("$code invoked at $inst")
-                                found = true
-                                return Pair(inst, found)
-                            } catch (e: Exception) {
-                                println("Can't set ${subprop.name} to ${value.value}. Error Code: $e")
-                            }
-                        }
-                        if (subprop.returnType.toString() == "YesNoUnknownOtherNa?") {
-                            try {
-                                subprop.javaSetter!!.invoke(inst, toYesNoUnknownOtherNa(value.value))
-                                //println("$code invoked at $inst")
-                                found = true
-                                return Pair(inst, found)
-                                //break
-                            } catch (e: Exception) {
-                                println("Can't set ${subprop.name} to $value. Error Code: $e")
-                            }
-                        }
-                        else {
-                            try {
-                                val valueGot = value.value
-                                if (valueGot != null) {
-                                    subprop.javaSetter!!.invoke(
-                                        inst, when (subprop.name) {
-                                            //hardcoded enum transformations, this must be hardcoded
-                                            in "ethnicGroup" -> value.toEnum1<EthnicGroup>()
-                                            in "chronicKidneyDisease" -> ChronicKidneyDisease.from(CodeableConcept(value.valueCoding))
-                                            in "diabetesMellitusType1" -> value.toEnum2<Diabetes>()
-                                            in "tobaccoSmokingStatus" -> value.toEnum2<SmokingStatus>()
-                                            in "malignantNeoplasticDiseases" -> value.toEnum1<CancerStatus>()
-                                            in "country" -> value.toEnum1<Countries>()
-                                            in "federalState" -> value.toEnum1<FederalStates>()
-                                            in "resuscitateOrder" -> value.toEnum1<Resuscitation>()
-                                            in "biologicalSex" -> value.toEnum1<BirthSex>()
-                                            in "pregnancyStatus" -> value.toEnum2<PregnancyStatus>()
-                                            in "frailityScore" -> value.toEnum2<FrailityScore>()
-                                            in "stageAtDiagnosis" -> value.toEnum2<StageAtDiagnosis>()
-                                            in "aceInhibitors" -> value.toEnum1<ACEInhibitorAdministration>()
-                                            in "ventilationType" -> value.toEnum1<VentilationTypes>()
-                                            in "radiologicalFindings" -> RadiologicFindings.from(CodeableConcept(value.valueCoding))
-                                            in "typeOfDischarge" -> TypeOfDischarge.ALIVE //to TypeOfDischarge
-                                            in "followupSwapResultIsPositive" -> null //to DetectedNotDetectedInconclusive
-                                            else -> when (valueGot) {
-                                                //variable type based transformations
-                                                is DecimalType -> valueGot.value.toFloat()
-                                                is IntegerType -> valueGot.value.toInt()
-                                                is StringType -> valueGot.value
-                                                is DateType -> value.toLocalDate()
-                                                is Coding -> toYesNoUnknown(valueGot)
-                                                else -> null
-                                            }
-                                        }
-                                    )
-                                    found = true
-                                    return Pair(inst, found)
-                                }
-                            } catch (e: Exception) {
-                                println("Can't set ${subprop.name} to $value. Error Code: $e")
-                            }
-                        }
-                    }
-                }
-                if (subprop.javaGetter!!.returnType.kotlin.memberProperties.isNotEmpty()) {
-                    findProperty(lm, code, subprop, value, inst)
-                }
-            }
-        }
-    }
-
-    return Pair(inst, found)
+    return null
 }
 
-fun setValue(lm: LogicalModel, code: String, value: QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent): LogicalModel {
+fun toLocalDate(value: Type): LocalDate? {
+    if (value is DateType) {
+        val format = getSimpleDateFormatterForPrecision(value.precision)
+        return format?.parse(value.valueAsString)?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+    }
 
-    for (property in lm::class.memberProperties) {
+    return null
+}
 
-        var inst = lm
+fun getSimpleDateFormatterForPrecision(precision: TemporalPrecisionEnum): SimpleDateFormat? {
+    return when (precision.name) {
+        "YEAR" -> SimpleDateFormat("yyyy")
+        "MONTH" -> SimpleDateFormat("yyyy-MM")
+        "DAY" -> SimpleDateFormat("yyyy-MM-dd")
+        "MINUTE" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm")
+        "SECOND" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+        "MILLISECOND" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+        else -> null
+    }
+}
 
-        //property is being searched, an instance of the property the value is inserted into and a found boolean are returned
-        var (valueInst, found) = findProperty(lm, code, property, value, inst)
+fun toFloat(value: Type): Float? {
+    if (value is DecimalType) {
+        return value.value.toFloat()
+    }
+    return null
+}
 
-        if (property is KMutableProperty<*> && found) {
+fun toInt(value: Type?): Int? {
+    if (value is IntegerType) {
+        return value.value.toInt()
+    }
+    return null
+}
+
+fun toStringValue(value: Type): String? {
+    if (value is StringType) {
+        return value.valueAsString
+    }
+
+    return null
+}
+
+
+fun setValueForCode(
+    logicalModel: LogicalModel,
+    code: String,
+    value: Any,
+    subProperties: Any? = null,
+    layer: Int = 0
+) {
+    val splittedCode = code.split(".")
+
+    val subProps: Any?
+    val instance: Any?
+
+    if (subProperties != null) {
+        subProps = subProperties.getPropertyThroughReflection(splittedCode[layer])
+        instance = subProperties.getInstanceThroughReflection(splittedCode[layer])
+    } else {
+        subProps = logicalModel.getPropertyThroughReflection(splittedCode[layer])
+        instance = logicalModel.getInstanceThroughReflection(splittedCode[layer])
+    }
+
+    if (subProps != null) {
+        if (splittedCode.size > layer + 1) {
+            //Walk through Logical model until all codes are used
+            setValueForCode(logicalModel, code, value, instance, layer + 1)
+        } else {
             try {
-                //inserts the final instance with the inserted value into the logicalmodel
-                property.javaSetter!!.invoke(lm, valueInst)
-                return lm
-            } catch (e: Exception) {
-                println("Couldn't set value in lm. Error Code: $e")
-            }
-
-        }
-    }
-
-    return lm
-}
-
-fun extractSpecial(lm: LogicalModel, mapped: HashMap<String, QRAnswer>): LogicalModel {
-
-    //property of symptoms has to be found and extracted in different manner, because more than one value has to be added to each element at a time
-    for (prop in lm::class.memberProperties) {
-        if (prop.name == "symptoms") {
-            if (prop is KMutableProperty<*>) {
-                try {
-                    var extSymptoms = extractSymptoms(mapped)
-                    prop.javaSetter!!.invoke(lm, extSymptoms)
-                    println("Set symptoms")
-                } catch (e:Exception) {
-                    println("Couldn't extract symptoms to lm. Error Code: $e")
-                }
-            }
-        }
-        //immunization has to be done seperately, because two values are needed for some properties
-        if (prop.name == "anamnesis") {
-            var immu = AnamnesisImmunizationStatus()
-            for (immuProp in immu.javaClass.kotlin.memberProperties) {
-                if (immuProp is KMutableProperty<*>) {
-                    if ("influenza" in immuProp.name) {
-                        try {
-                            immuProp.javaSetter!!.invoke(immu, YesNoUnknownWithDate(
-                                toYesNoUnknown(mapped["anamnesis.immunizationStatus.influenza"]?.value),
-                                (mapped["anamnesis.immunizationStatus.influenza.Datum"] as? BaseDateTimeType)?.toCalendar()?.time
-                            ))
-                        } catch (e:Exception) {
-                            println("Couldn't extract influenza immunization status. Error code: $e")
-                        }
-                    }
-                    if ("pneumococcal" in immuProp.name) {
-                        try {
-                            immuProp.javaSetter!!.invoke(immu, YesNoUnknownWithDate(
-                                toYesNoUnknown(mapped["anamnesis.immunizationStatus.pneumococcal"]?.value),
-                                (mapped["anamnesis.immunizationStatus.pneumococcal.Datum"]?.value as? BaseDateTimeType)?.toCalendar()?.time
-                            ))
-                        } catch (e:Exception) {
-                            println("Couldn't extract pneumococcal immunization status. Error code: $e")
-                        }
-                    }
-                    if ("bcg" in immuProp.name) {
-                        try {
-                            immuProp.javaSetter!!.invoke(immu, YesNoUnknownWithDate(
-                                toYesNoUnknown(mapped["anamnesis.immunizationStatus.bcg"]?.value),
-                                (mapped["anamnesis.immunizationStatus.bcg.Datum"]?.value as? BaseDateTimeType)?.toCalendar()?.time
-                            ))
-                        } catch (e:Exception) {
-                            println("Couldn't extract bcg immunization status. Error code: $e")
-                        }
-                    }
-                }
-            }
-
-            var anam = Anamnesis()
-            for (anamProp in anam.javaClass.kotlin.memberProperties) {
-                if (anamProp is KMutableProperty<*>) {
-                    if ("immunizationStatus" in anamProp.name) {
-                        try {
-                            anamProp.javaSetter!!.invoke(anam, immu)
-                        } catch (e:Exception) {
-                            println("Couldn't insert immunizationStatus object into anamnesis object. Error code: $e")
-                        }
-                    }
-                }
-            }
-            if (prop is KMutableProperty<*>) {
-                try {
-                    prop.javaSetter!!.invoke(lm, anam)
-                } catch (e:Exception) {
-                    println("Couldn't insert anamnesis object with immunization status for influenza, pneumococcal and bcg into lm. Error code: $e")
-                }
+                //Terminal value. Call setter on parent
+                subProperties?.setPropertyThroughReflection((subProps as KMutableProperty<*>).name, value)
+            } catch(e: Exception) {
+                println("Could not set value for code $code with type ${value.javaClass.simpleName}; Expected ${(subProps as KMutableProperty<*>).returnType}")
             }
         }
     }
-    return lm
 }
 
-fun extractSymptoms(mapByExtension: HashMap<String, QRAnswer>): Symptoms {
-    val result = Symptoms()
-    for (property in result::class.declaredMemberProperties) {
-        if (property is KMutableProperty<*>) {
-            val presence = toYesNoUnknown(mapByExtension["symptoms.${property.name}.presence"]?.value)
-            val severity =
-                if (presence == YesNoUnknown.YES && "asymptomatic" !in property.name) mapByExtension["symptoms.${property.name}.severity"]?.toEnum1<SymptomSeverity>() else null
+fun Any.getPropertyThroughReflection(propertyName: String): Any? {
+    return try {
+        this::class.members.find {it.name == propertyName}
+    } catch (e: NoSuchMethodException) {
+        null
+    }
+}
 
-            //var value = if (property.returnType.jvmErasure == YesNoUnknownWithSymptomSeverity::class) {
-            val value = if (property.returnType.toString() == "YesNoUnknownWithSymptomSeverity?") {
-                YesNoUnknownWithSymptomSeverity(presence, severity)
-            } else {
-                presence
-            }
+inline fun <reified T : Any> Any.getInstanceThroughReflection(propertyName: String): T? {
+    val getterName = "get" + propertyName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+    return try {
+        javaClass.getMethod(getterName).invoke(this) as? T
+    } catch (e: NoSuchMethodException) {
+        null
+    }
+}
 
-            try {
-                property.javaSetter!!.invoke(result, value)
-            } catch (e: Exception) {
-                println("${property.name}    presence = $presence severity = $severity value = $value")
-                println(e)
+fun Any.setPropertyThroughReflection(propertyName: String, value: Any) {
+    for (prop in this::class.declaredMemberProperties) {
+        if (prop.name == propertyName) {
+            (prop as? KMutableProperty<*>)?.setter?.call(this, value)
+        }
+    }
+}
+
+data class ProcessingHolder(var map: HashMap<String, QRAnswer>, var result: HashMap<String, Any>)
+
+fun ProcessingHolder.addResultAndFilterCodes(
+    resultsToAdd: Map<String, Any>,
+    subCodes: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>? = null
+)  {
+    this.result.putAll(resultsToAdd)
+    this.map =  this.map.filter {!this.result.containsKey(it.key)} as HashMap<String, QRAnswer>
+
+    if (subCodes!=null) {
+        for (entry in subCodes.entries) {
+            for (subCode in entry.value)
+                this.map.remove(subCode.key)
+        }
+    }
+
+}
+fun processMappedCodes(map: HashMap<String, QRAnswer>): HashMap<String, Any> {
+    val processingHolder = ProcessingHolder(map, HashMap())
+    //Order somewhat important as logic used to find codes overlaps
+
+    val specialTypes = getSpecialTypeToCodeAndAnswer(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createSpecialTypeForCodeAndAnswer(specialTypes))
+
+    val coronaCodes = findCovid19VaccinationCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createCovid19VaccinationFromCodes(coronaCodes), coronaCodes)
+
+    val statusWithDate = findYesNoUnknownWithDateCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createYesNoUnknownWithDateFromCodes(statusWithDate), statusWithDate)
+
+    val symptomSeverity = findYesNoUnknownWithSymptomSeverityCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createYesNoUnknownWithSymptomSeverityFromCodes(symptomSeverity), symptomSeverity)
+
+    val yesNoUnknownCodes = findYesNoUnknownCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createYesNoUnknownFromCodes(yesNoUnknownCodes), yesNoUnknownCodes)
+
+    val yesNoUnknownOtherNaCodes = findYesNoUnknownOtherNaCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createYesNoUnknownOtherNaFromCodes(yesNoUnknownOtherNaCodes), yesNoUnknownOtherNaCodes)
+
+    val yesNoUnknownWithIntent = findYesNoUnknownWithIntentCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createYesNoUnknownWithIntentFromCodes(yesNoUnknownWithIntent), yesNoUnknownWithIntent)
+
+    val valueCodes = findValueCodes(processingHolder.map)
+    processingHolder.addResultAndFilterCodes(createValuesFromCodes(valueCodes), valueCodes)
+
+    return processingHolder.result
+}
+
+data class SpecialEnumTypeToCodeAndAnswer(val clazz: KClass<*>?, val code: String, val answer: QRAnswer)
+
+fun getSpecialTypesFromLogicalModelWithPath(subProperties: Any, path:String = ""): Map<String, KClass<*>> {
+    val map = HashMap<String, KClass<*>>()
+    var newPath: String
+    subProperties.javaClass.kotlin.memberProperties.forEach{
+        val propertyValue = it.get(subProperties)
+
+        newPath = if (path.isNotEmpty()) {
+            "$path.${it.name}"
+        } else {
+            it.name
+        }
+
+        if (propertyValue?.javaClass?.kotlin?.memberProperties?.isNotEmpty() == true) {
+            map.putAll(getSpecialTypesFromLogicalModelWithPath(propertyValue, newPath))
+        } else {
+            when (it.returnType.toString()) {
+                "YesNoUnknown?" -> {}
+                "YesNoUnknownWithIntent?" -> {}
+                "YesNoUnknownOtherNa?" -> {}
+                "YesNoUnknownWithSymptomSeverity?" -> {}
+                "YesNoUnknownWithDate?" -> {}
+                "Covid19Vaccine?" -> {}
+                "kotlin.Float?" -> {}
+                "java.time.LocalDate?" -> {}
+                "kotlin.Int?" -> {}
+                "kotlin.String?" -> {}
+                //Only for classes that cannot be inferred by logic
+                else -> {map[newPath] = it.returnType.classifier as KClass<*>
+                }
             }
+        }
+    }
+    return map
+}
+
+fun getSpecialTypeToCodeAndAnswer(map: HashMap<String, QRAnswer>): List<SpecialEnumTypeToCodeAndAnswer> {
+    val result = mutableListOf<SpecialEnumTypeToCodeAndAnswer>()
+    val codesToFind = getSpecialTypesFromLogicalModelWithPath(LogicalModel())
+
+    map.filter {
+        codesToFind.containsKey(it.key)
+    }.forEach {
+        result.add(SpecialEnumTypeToCodeAndAnswer(codesToFind[it.key], it.key, it.value))
+    }
+    return result
+}
+
+fun createSpecialTypeForCodeAndAnswer(list: List<SpecialEnumTypeToCodeAndAnswer>): Map<String, Any>{
+    val result = HashMap<String, Any>()
+    for (entry in list) {
+        try {
+            when (entry.clazz) {
+                typeOf<ChronicKidneyDisease>().classifier -> {
+                    result[entry.code] = getByCoding2<ChronicKidneyDisease>(entry.answer.valueCoding)!!
+                }
+                typeOf<Diabetes>().classifier -> {
+                    result[entry.code] = getByCoding2<Diabetes>(entry.answer.valueCoding)!!
+                }
+                typeOf<Countries>().classifier -> {
+                    result[entry.code] = getByCoding<Countries>(entry.answer.valueCoding)!!
+                }
+                typeOf<FederalStates>().classifier -> {
+                    result[entry.code] = getByCoding<FederalStates>(entry.answer.valueCoding)!!
+                }
+                typeOf<CancerStatus>().classifier -> {
+                    result[entry.code] = getByCoding<CancerStatus>(entry.answer.valueCoding)!!
+                }
+                typeOf<Resuscitation>().classifier -> {
+                    result[entry.code] = getByCoding<Resuscitation>(entry.answer.valueCoding)!!
+                }
+                typeOf<SmokingStatus>().classifier -> {
+                    result[entry.code] = getByCoding2<SmokingStatus>(entry.answer.valueCoding)!!
+                }
+                typeOf<BirthSex>().classifier -> {
+                    result[entry.code] = getByCoding<BirthSex>(entry.answer.valueCoding)!!
+                }
+                typeOf<EthnicGroup>().classifier -> {
+                    result[entry.code] = getByCoding<EthnicGroup>(entry.answer.valueCoding)!!
+                }
+                typeOf<FrailityScore>().classifier -> {
+                    result[entry.code] = getByCoding2<FrailityScore>(entry.answer.valueCoding)!!
+                }
+                typeOf<PregnancyStatus>().classifier -> {
+                    result[entry.code] = getByCoding2<PregnancyStatus>(entry.answer.valueCoding)!!
+                }
+                typeOf<RadiologicFindings>().classifier -> {
+                    result[entry.code] = getByCoding2<RadiologicFindings>(entry.answer.valueCoding)!!
+                }
+                typeOf<ACEInhibitorAdministration>().classifier -> {
+                    result[entry.code] = getByCoding<ACEInhibitorAdministration>(entry.answer.valueCoding)!!
+                }
+                typeOf<StageAtDiagnosis>().classifier -> {
+                    result[entry.code] = getByCoding2<StageAtDiagnosis>(entry.answer.valueCoding)!!
+                }
+                typeOf<DetectedNotDetectedInconclusive>().classifier -> {
+                    result[entry.code] = getByCoding2<DetectedNotDetectedInconclusive>(entry.answer.valueCoding)!!
+                }
+                typeOf<TypeOfDischarge>().classifier -> {
+                    result[entry.code] = getByCoding2<TypeOfDischarge>(entry.answer.valueCoding)!!
+                }
+                typeOf<VentilationTypes>().classifier -> {
+                    result[entry.code] = getByCoding<VentilationTypes>(entry.answer.valueCoding)!!
+                }
+            }
+        } catch (e: Exception) {
+            println("Could not fetch correct Enum type. QuestionnaireResponse is probably faulty.")
+        }
+    }
+
+    return result
+}
+
+fun findCovid19VaccinationCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.key.substringAfterLast(".").contains("date") ||
+        it.key.substringAfterLast(".").contains("status") ||
+        it.key.substringAfterLast(".").contains("vaccine")
+    }.groupBy { it.key.substringBeforeLast(".") }
+    .filter {it.value.size > 2}
+}
+
+fun createCovid19VaccinationFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        val coding = Covid19Vaccination()
+        for (subcode in code.value) {
+            if (subcode.key.contains("status")) {
+                coding.status = toYesNoUnknown(subcode.value.valueCoding)
+            } else if (subcode.key.contains("date")) {
+                coding.date = toLocalDate(subcode.value.value)
+            } else if (subcode.key.contains("vaccine")) {
+                coding.vaccine = getByCoding<Covid19Vaccine>(subcode.value.valueCoding)
+            }
+        }
+        result[code.key] = coding
+    }
+    return result
+}
+fun findYesNoUnknownWithDateCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.key.substringAfterLast(".").contains("date") ||
+        it.key.substringAfterLast(".").contains("status")
+    }.groupBy { it.key.substringBeforeLast(".") }
+    .filter {it.value.size > 1}
+}
+
+fun createYesNoUnknownWithDateFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): HashMap<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        val coding = YesNoUnknownWithDate()
+        for (subcode in code.value) {
+            if (subcode.key.contains("status")) {
+                coding.yesNoUnknown = toYesNoUnknown(subcode.value.valueCoding)
+            } else if (subcode.key.contains("date")) {
+                coding.date = toDate(subcode.value.value)
+            }
+        }
+        result[code.key] = coding
+    }
+    return result
+}
+
+
+fun findYesNoUnknownWithSymptomSeverityCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.key.substringAfterLast(".").contains("presence") ||
+        it.key.substringAfterLast(".").contains("severity")
+    }.groupBy { it.key.substringBeforeLast(".") }
+    .filter {it.value.size > 1}
+}
+
+fun createYesNoUnknownWithSymptomSeverityFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): HashMap<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        val coding = YesNoUnknownWithSymptomSeverity()
+        for (subcode in code.value) {
+            if (subcode.key.contains("severity")) {
+                coding.severity = getByCoding<SymptomSeverity>(subcode.value.valueCoding)
+            } else if (subcode.key.contains("presence")) {
+                coding.yesNoUnknown = toYesNoUnknown(subcode.value.valueCoding)
+            }
+        }
+        result[code.key] = coding
+    }
+    return result
+}
+
+fun findYesNoUnknownCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.value.value is Coding &&
+        (
+            (it.value.value as Coding).code == YesNoUnknown.YES.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknown.NO.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknown.UNKNOWN.coding.code
+        )
+    }.groupBy { it.key }
+}
+
+fun createYesNoUnknownFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        // Should always have one entry, but to be consistent in syntax
+        for (subcode in code.value) {
+            result[code.key] = toYesNoUnknown(subcode.value.valueCoding)!!
         }
     }
     return result
 }
+
+fun findYesNoUnknownOtherNaCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.value.value is Coding &&
+        (
+            (it.value.value as Coding).code == YesNoUnknownOtherNa.YES.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknownOtherNa.NO.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknownOtherNa.UNKNOWN.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknownOtherNa.OTHER.coding.code ||
+            (it.value.value as Coding).code == YesNoUnknownOtherNa.NA.coding.code
+        )
+    }.groupBy { it.key }
+}
+
+fun createYesNoUnknownOtherNaFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        // Should always have one entry, but to be consistent in syntax
+        for (subcode in code.value) {
+            result[code.key] = toYesNoUnknownOtherNa(subcode.value.valueCoding)!!
+        }
+    }
+    return result
+}
+
+fun findYesNoUnknownWithIntentCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.key.substringAfterLast(".").contains("intent") ||
+        it.key.substringAfterLast(".").contains("administration")
+    }.groupBy { it.key.substringBeforeLast(".") }
+    .filter {it.value.size > 1}
+}
+
+fun createYesNoUnknownWithIntentFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        val coding = YesNoUnknownWithIntent()
+        for (subcode in code.value) {
+            if (subcode.key.contains("intent")) {
+                coding.intent = getByCoding2<TherapeuticIntent>(subcode.value.valueCoding)
+            } else if (subcode.key.contains("administration")) {
+                coding.administration = toYesNoUnknown(subcode.value.valueCoding)
+            }
+        }
+        result[code.key] = coding
+    }
+    return result
+}
+
+fun findValueCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+    return map.entries.filter {
+        it.value.value is IntegerType ||
+        it.value.value is DecimalType ||
+        it.value.value is StringType ||
+        it.value.value is DateType
+    }.groupBy { it.key }
+}
+
+fun createValuesFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+    val result = HashMap<String, Any>()
+    for (code in map) {
+        for (subcode in code.value) {
+           val value = when (subcode.value.value::class) {
+               StringType::class -> toStringValue(subcode.value.value)
+               DateType::class -> toLocalDate(subcode.value.value)
+               IntegerType::class -> toInt(subcode.value.value)
+               DecimalType::class -> toFloat(subcode.value.value)
+               else -> null
+           }
+            result[code.key] = value!!
+        }
+    }
+    return result
+}
+
 
 fun extractLab(mapByExtension: HashMap<String, QRAnswer>): LaboratoryValuesLaboratoryValue {
     val result = LaboratoryValuesLaboratoryValue()
@@ -444,33 +596,11 @@ fun extractLab(mapByExtension: HashMap<String, QRAnswer>): LaboratoryValuesLabor
 }
 
 
-inline fun <reified T> QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent.toEnum1(): T? where T : CodeableEnum<T>, T : Enum<T> {
-    return (this.value as? Coding)?.let { getByCoding<T>(it) }
-}
-
-inline fun <reified T> QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent.toEnum2(): T? where T : ConceptEnum<T>, T : Enum<T> {
-    return (this.value as? Coding)?.let { getByCoding2<T>(it) }
-}
-
-fun QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent.toDecimal(): Float? {
-    return (this.value as? DecimalType)?.value?.toFloat()
-}
-
-fun QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent.toInt(): Int? {
-    return (this.value as? IntegerType)?.value
-}
-
-fun QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent.toLocalDate(): LocalDate? {
-    val dateType = this.value as? DateType
-    return dateType?.let { LocalDate.of(it.year, it.month, it.day) }
-}
-
-
 fun mapByExtension(response: QR, hashMap: HashMap<String, QRAnswer> = HashMap()): HashMap<String, QRAnswer> {
     response.item.forEach { itemComponent -> itemComponent.answer?.forEach { mapByExtension(it, hashMap) } }
     response.item.forEach { mapByExtension(it, hashMap) }
 //    response.extension?.forEach { extension -> hashMap.put((extension.value as CodeType).code, responseAnswer)}
-    return hashMap;
+    return hashMap
 }
 
 
@@ -483,7 +613,7 @@ fun mapByExtension(responseItem: QRItem, hashMap: HashMap<String, QRAnswer> = Ha
         hashMap[(extension.value as Coding).code] = responseItem.answerFirstRep
     }
 
-    return hashMap;
+    return hashMap
 }
 
 fun mapByExtension(
@@ -496,5 +626,5 @@ fun mapByExtension(
     if (extension != null) {
         hashMap[(extension.value as Coding).code] = responseAnswer
     }
-    return hashMap;
+    return hashMap
 }
