@@ -77,7 +77,7 @@ enum class EncounterClasses(val coding: Coding) {
 }
 
 //TODO: So kann das nur fuer SARS-COV2 benutzt werden.
-enum class DetectedNotDetectedInconclusive(val codeableConcept: CodeableConcept, val displayDe: String) {
+enum class DetectedNotDetectedInconclusive(override val codeableConcept: CodeableConcept, val displayDe: String): ConceptEnum<DetectedNotDetectedInconclusive> {
 	DETECTED(CodeableConcept().apply {
 		coding = listOf(snomed("260373001", "Detected (qualifier value)"))
 		text = "SARS-CoV-2-RNA positiv"
@@ -201,7 +201,7 @@ enum class ChronicNeurologicalMentalDisease(val codeableConcept: CodeableConcept
 	),
 }
 
-enum class ChronicKidneyDisease(val codeableConcept: CodeableConcept, val displayDe: String) {
+enum class ChronicKidneyDisease(override val codeableConcept: CodeableConcept, val displayDe: String): ConceptEnum<ChronicKidneyDisease> {
 	CHRONIC_KIDNEY_DISEASE_STAGE_1(CodeableConcept().apply {
 		coding = listOf(snomed("431855005", "Chronic kidney disease stage 1 (disorder)"))
 	}, displayDe = "Ja, Stadium 1"),
@@ -258,7 +258,7 @@ enum class Imaging(val codeableConcept: CodeableConcept) {
 }
 
 
-enum class RadiologicFindings(val codeableConcept: CodeableConcept) {
+enum class RadiologicFindings(override val codeableConcept: CodeableConcept): ConceptEnum<RadiologicFindings> {
 	UNSPECIFIC(CodeableConcept().apply {
 		coding = listOf(
 			snomed(
@@ -807,7 +807,7 @@ enum class GeccoUnits(val code:String, val display: String): CodeableEnum<GeccoU
 }
 
 
-enum class TypeOfDischarge(val codeableConcept: CodeableConcept) {
+enum class TypeOfDischarge(override val codeableConcept: CodeableConcept): ConceptEnum<TypeOfDischarge> {
 	ALIVE(CodeableConcept(snomed("371827001", "Patient discharged alive (finding)"))),
 	REFERRAL(CodeableConcept(snomed("3457005", "Patient referral (procedure)"))),
 	PALLIATIVE_DISCHARGE(CodeableConcept(snomed("306237005", "Referral to palliative care service (procedure)"))),
@@ -1307,7 +1307,7 @@ enum class MedicationCovid19(val snomed: Coding? = null, val num: Coding? = null
 	ZINC(snomed = snomed("764877006", "Product containing zinc (medicinal product)")),
 }
 
-enum class TherapeuticIntent(val codeableConcept: CodeableConcept) {
+enum class TherapeuticIntent(override val codeableConcept: CodeableConcept): ConceptEnum<TherapeuticIntent> {
 //	ADJUNCT(CodeableConcept(snomed("421974008", "Adjunct - intent (qualifier value)"))),
 //	ADJUVANT(CodeableConcept(snomed("373846009", "Adjuvant - intent (qualifier value)"))),
 	CURATIVE(CodeableConcept(snomed("373808002", "Curative - procedure intent (qualifier value)"))),
