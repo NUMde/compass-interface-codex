@@ -4,36 +4,29 @@ import org.hl7.fhir.r4.model.Procedure
 import org.hl7.fhir.r4.model.codesystems.ConditionClinical
 import java.util.*
 
-fun snomed(code: String, display: String) = Coding("http://snomed.info/sct", code, display)
-fun loinc(code: String, display: String) = Coding("http://loinc.org", code, display)
-fun icd10gm(code: String, display: String) = Coding("http://fhir.de/CodeSystem/dimdi/icd-10-gm", code, display)
-
-//TODO: change to http://fhir.de/CodeSystem/bfarm/icd-10-gm
-fun alpha_id(code: String, display: String) = Coding("http://fhir.de/CodeSystem/bfarm/alpha-id", code, display)
-fun orphanet(code: String, display: String) = Coding("http://www.orpha.net", code, display)
-fun atc(code: String, display: String) = Coding("http://fhir.de/CodeSystem/dimdi/atc", code, display)
-fun dicom(code: String, display: String) = Coding("http://dicom.nema.org/resources/ontology/DCM", code, display)
-fun iso3166_1_2(code: String, display: String) = Coding("urn:iso:std:iso:3166", code, display)
-fun iso3155DE(code: String, display: String) = Coding("urn:iso:std:iso:3166-2:de", code, display)
-
-
 interface CodeableEnum<T : Enum<T>> {
 	val coding: Coding
 }
 
-inline fun <reified T> getByCoding(coding: Coding): T? where T : CodeableEnum<T>, T: Enum<T> {
-	return enumValues<T>().find { it.coding.system ==  coding.system && it.coding.code == coding.code }
-}
-
-interface ConceptEnum<T: Enum<T>> {
+interface ConceptEnum<T : Enum<T>> {
 	val codeableConcept: CodeableConcept
 }
 
-inline fun <reified T> getByCoding2(coding: Coding): T? where T : ConceptEnum<T>, T: Enum<T> {
-	return enumValues<T>().find { it.codeableConcept.coding.any { it.system ==  coding.system && it.code == coding.code } }
+inline fun <reified T> getByCoding(coding: Coding): T? where T : CodeableEnum<T>, T : Enum<T> {
+	return enumValues<T>().find { it.coding.system == coding.system && it.coding.code == coding.code }
 }
 
-enum class EthnicGroup(override val coding: Coding): CodeableEnum<EthnicGroup> {
+inline fun <reified T> getByCoding2(coding: Coding): T? where T : ConceptEnum<T>, T : Enum<T> {
+	return enumValues<T>().find { it.codeableConcept.coding.any { it.system == coding.system && it.code == coding.code } }
+}
+
+enum class YesNoUnknown(override val coding: Coding) : CodeableEnum<YesNoUnknown> {
+	YES(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "Y", "Ja")),
+	NO(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "N", "Nein")),
+	UNKNOWN(Coding("http://terminology.hl7.org/CodeSystem/data-absent-reason", "asked-unknown", "Unbekannt"))
+}
+
+enum class EthnicGroup(override val coding: Coding) : CodeableEnum<EthnicGroup> {
 	CAUCASIAN(snomed("14045001", "Caucasian (ethnic group)")),
 	BLACK_AFRICAN(snomed("18167009", "Black African (ethnic group)")),
 	ASIAN(snomed("315280000", "Asian - ethnic group (ethnic group)")),
@@ -174,29 +167,18 @@ enum class ChronicNeurologicalMentalDisease(val codeableConcept: CodeableConcept
 	DEMENTIA(CodeableConcept(snomed("52448006", "Dementia (disorder)"))),
 	MULTIPLE_SCLEROSIS(CodeableConcept(snomed("24700007", "Multiple sclerosis (disorder)"))),
 	COMBINED_DISORDER_OF_MUSCLE_AND_PERIPHERAL_NERVE(
-		CodeableConcept(
-			snomed(
-				"257277002",
-				"Combined disorder of muscle AND peripheral nerve (disorder)"
-			)
-		)
+		CodeableConcept(snomed("257277002", "Combined disorder of muscle AND peripheral nerve (disorder)"))
 	),
 	EPILEPSY(CodeableConcept(snomed("84757009", "Epilepsy (disorder)"))),
 	MIGRAINE(CodeableConcept(snomed("37796009", "Migraine (disorder)"))),
 	HISTORY_OF_CEREBROVASCULAR_ACCIDENT_WITH_RESIDUAL_DEFICIT(
 		CodeableConcept(
-			snomed(
-				"440140008",
-				"History of cerebrovascular accident with residual deficit (situation)"
-			)
+			snomed("440140008", "History of cerebrovascular accident with residual deficit (situation)")
 		)
 	),
 	HISTORY_OF_CEREBROVASCULAR_ACCIDENT_WITHOUT_RESIDUAL_DEFICITS(
 		CodeableConcept(
-			snomed(
-				"429993008",
-				"History of cerebrovascular accident without residual deficits (situation)"
-			)
+			snomed("429993008", "History of cerebrovascular accident without residual deficits (situation)")
 		)
 	),
 }
@@ -291,19 +273,13 @@ enum class RadiologicFindings(override val codeableConcept: CodeableConcept): Co
 		fun from(findValue: CodeableConcept): RadiologicFindings? = RadiologicFindings.values()
 			.firstOrNull { value ->
 				value.codeableConcept.coding.any { coding ->
-					findValue.hasCoding(
-						coding.system,
-						coding.code
-					)
+					findValue.hasCoding(coding.system, coding.code)
 				}
 			}
 	}
 
 }
 
-fun frailty_score(code: String, display: String) = Coding(
-	"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/frailty-score", code, display
-)
 
 enum class FrailityScore(override val codeableConcept: CodeableConcept) : ConceptEnum<FrailityScore> {
 	VERY_FIT(CodeableConcept(frailty_score("1", "Very Fit"))),
@@ -333,10 +309,6 @@ enum class ObservationCategory(val codeableConcept: CodeableConcept) {
 	SURVEY(CodeableConcept(org.hl7.fhir.r4.model.codesystems.ObservationCategory.SURVEY.toCoding()))
 
 }
-
-fun org.hl7.fhir.r4.model.codesystems.ObservationCategory.toCoding() =
-	Coding(this.system, this.toCode(), this.display)
-
 
 enum class PregnancyStatus(override val codeableConcept: CodeableConcept): ConceptEnum<PregnancyStatus> {
 	NOT_PREGNANT(CodeableConcept().apply {
@@ -403,10 +375,7 @@ enum class ComplicationsCovid19(val codeableConcept: CodeableConcept) {
 	MYOCARDIAL_INFARCTION(CodeableConcept(snomed("22298006", "Myocardial infarction (disorder)"))),
 	PRE_RENAL_ACUTE_KINDEY_INJURY(
 		CodeableConcept(
-			snomed(
-				"129561000119108",
-				"Pre-renal acute kidney injury (disorder)"
-			)
+			snomed("129561000119108", "Pre-renal acute kidney injury (disorder)")
 		)
 	),
 	//TODO: Add also ICD10 codes?

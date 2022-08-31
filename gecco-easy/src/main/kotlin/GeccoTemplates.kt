@@ -13,16 +13,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 
-fun unknownDateTime() = DateTimeType().apply {
-	extension = listOf(dataAbsentReasonUnknown())
-}
-
-fun unknownPeriod() = Period().apply {
-	extension = listOf(dataAbsentReasonUnknown())
-}
-
-fun LocalDateTime.toUtilDate(): Date = java.sql.Timestamp.valueOf(this)
-
 
 /**
  * Polyfill to stay compatible with HAPI 5.2.1 code
@@ -394,11 +384,6 @@ fun main() {
 }
 
 
-enum class YesNoUnknown(override val coding: Coding): CodeableEnum<YesNoUnknown> {
-	YES(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "Y", "Ja")),
-	NO(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "N", "Nein")),
-	UNKNOWN(Coding("http://terminology.hl7.org/CodeSystem/data-absent-reason", "asked-unknown", "Unbekannt"))
-}
 
 fun GeccoPatient(
 	patientId: IdType,
@@ -967,10 +952,6 @@ fun Symptom(
 	}
 }
 
-private fun uncertainityOfPresence() = Extension(
-	"https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/uncertainty-of-presence",
-	CodeableConcept(snomed("261665006", "Unknown (qualifier value)"))
-)
 
 
 fun RespiratoryOutcome(patientRef: Reference, recordedDate: DateTimeType, response: ConditionVerificationStatus) =
@@ -1070,8 +1051,6 @@ fun VentilationType(patientRef: Reference, ventilationTypes: VentilationTypes, b
 		}
 	}
 
-fun dataAbsentReasonUnknown() =
-	Extension("http://hl7.org/fhir/StructureDefinition/data-absent-reason", CodeType("unknown"))
 
 fun FollowUpSwipeResults(
 	patientRef: Reference,
