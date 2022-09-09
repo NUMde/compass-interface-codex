@@ -144,15 +144,11 @@ fun logicalModelToGeccoProfile(
                 }
             } else if (logicalModel.anamnesis.hasChronicLungDiseases!! == YesNoUnknown.NO) {
                 for (chronicLungDisease in ChronicLungDisease.values()) {
-                    add(
-                        AnaChronicLungDisease(patientRef, chronicLungDisease, YesNoUnknown.NO, recordedDate)
-                    )
+                    add(AnaChronicLungDisease(patientRef, chronicLungDisease, YesNoUnknown.NO, recordedDate))
                 }
             } else if (logicalModel.anamnesis.hasChronicLungDiseases!! == YesNoUnknown.UNKNOWN) {
                 for (chronicLungDisease in ChronicLungDisease.values()) {
-                    add(
-                        AnaChronicLungDisease(patientRef, chronicLungDisease, YesNoUnknown.UNKNOWN, recordedDate)
-                    )
+                    add(AnaChronicLungDisease(patientRef, chronicLungDisease, YesNoUnknown.UNKNOWN, recordedDate))
                 }
             }
         }
@@ -288,13 +284,7 @@ fun logicalModelToGeccoProfile(
                 }
             } else if (logicalModel.anamnesis.hasChronicLiverDiseases!! == YesNoUnknown.UNKNOWN) {
                 for (chronicLiverDisease in ChronicLiverDiseases.values()) {
-                    add(
-                        AnaChronicLiver(
-                            patientRef, ChronicLiverDiseases.STEATOSIS_OF_LIVER,
-                            YesNoUnknown.UNKNOWN,
-                            recordedDate
-                        )
-                    )
+                    add(AnaChronicLiver(patientRef, chronicLiverDisease, YesNoUnknown.UNKNOWN, recordedDate))
                 }
             }
         }
