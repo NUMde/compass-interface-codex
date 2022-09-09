@@ -785,11 +785,11 @@ enum class TypeOfDischarge(override val codeableConcept: CodeableConcept): Conce
 	DEATH(CodeableConcept(snomed("419099009", "Dead (finding)"))),
 }
 
-enum class SymptomSeverity(override val coding: Coding): CodeableEnum<SymptomSeverity> {
-	MILD(snomed("255604002", "Mild (qualifier value)")),
-	MODERATE(snomed("6736007", "Moderate (severity modifier) (qualifier value)")),
-	SEVERE(snomed("24484000", "Severe (severity modifier) (qualifier value)")),
-	LIFE_THREATENING(snomed("442452003", "Life threatening severity (qualifier value)"))
+enum class SymptomSeverity(override val coding: Coding, val displayDe: String) : CodeableEnum<SymptomSeverity> {
+	MILD(snomed("255604002", "Mild (qualifier value)"), "mild"),
+	MODERATE(snomed("6736007", "Moderate (severity modifier) (qualifier value)"), "moderat"),
+	SEVERE(snomed("24484000", "Severe (severity modifier) (qualifier value)"), "schwer"),
+	LIFE_THREATENING(snomed("442452003", "Life threatening severity (qualifier value)"), "lebensbedrohlich")
 }
 
 enum class OrgansForTransplant(val snomed: Coding, val icd10: Coding?) {
