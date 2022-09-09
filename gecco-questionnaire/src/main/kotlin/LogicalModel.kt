@@ -1,6 +1,5 @@
 import org.hl7.fhir.r4.model.Coding
 import org.hl7.fhir.r4.model.MedicationStatement
-import java.util.*
 import java.time.LocalDate
 
 @Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
@@ -389,7 +388,9 @@ data class AnamnesisImmunizationStatus(
     @Text("Covid-19: 2. Impfung") @EnableWhenYes("anamnesis.immunizationStatus.covid19_first.status")
     var covid19_second: Covid19Vaccination? = Covid19Vaccination(),
     @Text("Covid-19: 3. Impfung") @EnableWhenYes("anamnesis.immunizationStatus.covid19_second.status")
-    var covid19_third: Covid19Vaccination? = Covid19Vaccination()
+    var covid19_third: Covid19Vaccination? = Covid19Vaccination(),
+    @Text("Covid-19: 4. Impfung") @EnableWhenYes("anamnesis.immunizationStatus.covid19_third.status")
+    var covid19_fourth: Covid19Vaccination? = Covid19Vaccination()
 )
 
 data class Covid19Vaccination(

@@ -167,7 +167,6 @@ fun propertyToItem(
 
             type = Questionnaire.QuestionnaireItemType.GROUP
             this.item = listOf(QItem().apply {
-                //TODO: Reuse
                 linkId = item.linkId + ".1"
                 extractEnum(YesNoUnknown::class.java)
                 addExtension(compassGeccoItem("$compassId.status"))
@@ -175,13 +174,13 @@ fun propertyToItem(
                 linkId = item.linkId + ".2"
                 text = "Datum"
                 type = Questionnaire.QuestionnaireItemType.DATE
-                addExtension(compassGeccoItem("$compassId.date"))
-                addExtension(dependendItem())
                 enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
                     question = "${compassId.removePrefix(".")}.status"
                     operator = Questionnaire.QuestionnaireItemOperator.EQUAL
                     answer = YesNoUnknown.YES.coding
                 })
+                addExtension(compassGeccoItem("$compassId.date"))
+                addExtension(dependendItem())
             }
             )
 
@@ -341,6 +340,10 @@ fun replaceGeccoIDWithLinkID(qItems: List<QItem>, mapByExtension: Map<String, QI
     }
 }
 
+fun mapByExtension(questionnaire: Questionnaire): Map<String, QItem> {
+    return questionnaire.allItems.associateBy { (it.getExtensionByUrl("https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem").value as Coding).code }
+}
+
 fun compassGeccoItem(compassId: String) = Extension(
     COMPASS_GECCO_ITEM_EXTENSION,
     Coding(COMPASS_GECCO_ITEM_CS, compassId.removePrefix("."), null).setVersion("1.0")
@@ -356,7 +359,4 @@ fun questionnaireUnit(coding: Coding) =
     Extension("http://hl7.org/fhir/StructureDefinition/questionnaire-unit", coding)
 
 
-fun mapByExtension(questionnaire: Questionnaire): Map<String, QItem> {
-    return questionnaire.allItems.associateBy { (it.getExtensionByUrl("https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem").value as Coding).code }
-}
 
