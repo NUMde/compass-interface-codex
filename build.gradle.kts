@@ -25,11 +25,12 @@ repositories {
 }
 
 val hapiVersion: String by project
+val kotlinLoggingVersion: String by project
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("ch.qos.logback", "logback-classic", "1.2.3")
-    implementation("io.github.microutils:kotlin-logging:2.1.21")
+    implementation("ch.qos.logback", "logback-classic", "1.4.1")
+    implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation(project("compass-download-kotlin"))
     implementation(project("gecco-questionnaire"))

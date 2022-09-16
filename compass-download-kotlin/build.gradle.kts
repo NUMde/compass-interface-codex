@@ -9,29 +9,31 @@ plugins {
 val projectVersion: String by project
 group = "de.unimuenster.imi.medic"
 version = projectVersion
-val ktor_version = "2.0.3"
 
 repositories {
     mavenCentral()
 }
 
+val ktor_version: String by project
+val kotlinLoggingVersion: String by project
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
-    implementation("io.ktor:ktor-client-core:$ktor_version")
-    implementation("io.ktor:ktor-client-apache:$ktor_version")
-    implementation("io.ktor:ktor-client-serialization:$ktor_version")
+    implementation("io.ktor:ktor-client-core-jvm:$ktor_version")
+    implementation("io.ktor:ktor-client-apache-jvm:$ktor_version")
+    implementation("io.ktor:ktor-client-serialization-jvm:$ktor_version")
+    implementation("io.ktor:ktor-client-logging-jvm:$ktor_version")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
-    implementation("io.ktor:ktor-client-logging:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
 
     implementation("ch.qos.logback", "logback-classic", "1.2.3")
-    implementation("io.github.microutils:kotlin-logging:1.7.7")
+    implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation("org.bouncycastle:bcprov-jdk15on:1.68")
     implementation("org.bouncycastle:bcmail-jdk16:1.46")
     implementation("org.bouncycastle:bcpkix-jdk15on:1.68")
+
     testImplementation(kotlin("test-junit"))
 }
 
