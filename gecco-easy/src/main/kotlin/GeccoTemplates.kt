@@ -725,9 +725,15 @@ fun AnaDNR(patientRef: Reference, resuscitation: Resuscitation) = Consent().appl
 	scope =
 		CodeableConcept(Coding("http://terminology.hl7.org/CodeSystem/consentscope", "adr", "Advanced Care Directive"))
 	patient = patientRef
-
+	dateTimeElement = unknownDateTime()
 	category = listOf(
-		CodeableConcept(Coding("http://terminology.hl7.org/CodeSystem/consentcategorycodes", "dnr", "Do Not Resuscitate"))
+		CodeableConcept(
+			Coding(
+				"http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+				"dnr",
+				"Do Not Resuscitate"
+			)
+		)
 	)
 	policy = listOf(Consent.ConsentPolicyComponent().apply {
 		uri = "https://www.aerzteblatt.de/archiv/65440/DNR-Anordnungen-Das-fehlende-Bindeglied"
@@ -790,9 +796,14 @@ fun ErregernachweisPCR(patientRef: Reference, detectedInconclusive: DetectedNotD
 				type = CodeableConcept(
 					Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "OBI", "Observation Instance Identifier")
 				)
-				system = "https://ukmuenster.de/ORBIS/"
+				system = "https://compass.science/fhir/NamingSystem/RT_PCR"
 				value = "TODO" //TODO
-				assigner = Reference() //TODO
+				assigner = Reference().apply {
+					identifier = Identifier().apply {
+						system = "https://compass.science/fhir/NamingSystem/Assigner"
+						value = "unknown-assigner"
+					}
+				}
 			}
 		)
 		status = Observation.ObservationStatus.FINAL
@@ -807,7 +818,7 @@ fun ErregernachweisPCR(patientRef: Reference, detectedInconclusive: DetectedNotD
 			text = "SARS-CoV-2-RNA (PCR)"
 		}
 		subject = patientRef
-		effective = DateTimeType() //TODO
+		effective = unknownDateTime() //TODO
 		value = detectedInconclusive.codeableConcept
 	}
 
@@ -909,7 +920,7 @@ fun Complications(
 	when (yesNoUnknown) {
 		NO -> verificationStatus = ConditionVerificationStatus.REFUTED.codeableConcept
 		YES -> verificationStatus = ConditionVerificationStatus.VERIFIED.codeableConcept
-		UNKNOWN -> extension = listOf(uncertainityOfPresence())
+		UNKNOWN -> modifierExtension = listOf(uncertainityOfPresence())
 	}
 }
 

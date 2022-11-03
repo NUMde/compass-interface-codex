@@ -98,12 +98,7 @@ enum class ChronicLungDisease(val codeableConcept: CodeableConcept) {
 
 enum class CardiovascularDiseases(val codeableConcept: CodeableConcept) {
 	HYPERTENSIVE_DISORDER_SYSTEMIC_ARTERIAL(
-		CodeableConcept(
-			snomed(
-				"38341003",
-				"Hypertensive disorder, systemic arterial (disorder)"
-			)
-		)
+		CodeableConcept(snomed("38341003", "Hypertensive disorder, systemic arterial (disorder)"))
 	),
 	ZUSTAND_NACH_HERZINFARKT(
 		CodeableConcept(
@@ -116,12 +111,7 @@ enum class CardiovascularDiseases(val codeableConcept: CodeableConcept) {
 	CARDIAC_ARRHYTHMIA(CodeableConcept(snomed("698247007", "Cardiac arrhythmia (disorder)"))),
 	HEART_FAILURE(CodeableConcept(snomed("84114007", "Heart failure (disorder)"))),
 	PERIPHERAL_ARTERIAL_OCCLUSIVE_DISEASE(
-		CodeableConcept(
-			snomed(
-				"399957001",
-				"Peripheral arterial occlusive disease (disorder)"
-			)
-		)
+		CodeableConcept(snomed("399957001", "Peripheral arterial occlusive disease (disorder)"))
 	),
 	ZUSTAND_NACH_REVASKULARISATION(
 		CodeableConcept(
@@ -148,12 +138,7 @@ enum class RheumatologicalImmunologicalDiseases(val codeableConcept: CodeableCon
 	COLLAGENOSIS(CodeableConcept(snomed("105969002", "Disorder of connective tissue (disorder)"))),
 	VASCULITIS(CodeableConcept(snomed("31996006", "Vasculitis (disorder)"))),
 	CONGENITAL_IMMUNODEFICIENCY_DISEASE(
-		CodeableConcept(
-			snomed(
-				"36138009",
-				"Congenital immunodeficiency disease (disorder)"
-			)
-		)
+		CodeableConcept(snomed("36138009", "Congenital immunodeficiency disease (disorder)"))
 	),
 }
 
@@ -209,10 +194,6 @@ enum class ChronicKidneyDisease(override val codeableConcept: CodeableConcept, v
 	ABSENT(CodeableConcept(YesNoUnknown.NO.coding), displayDe = "Nein");
 	//TODO: Add ICD-10
 
-	companion object {
-		fun from(findValue: CodeableConcept): ChronicKidneyDisease? = values()
-			.firstOrNull{ value -> value.codeableConcept.coding.any{ coding -> findValue.hasCoding(coding.system, coding.code) } }
-	}
 }
 
 enum class Imaging(val codeableConcept: CodeableConcept) {
@@ -269,14 +250,6 @@ enum class RadiologicFindings(override val codeableConcept: CodeableConcept): Co
 		text = "Normalbefund"
 	});
 
-	companion object {
-		fun from(findValue: CodeableConcept): RadiologicFindings? = RadiologicFindings.values()
-			.firstOrNull { value ->
-				value.codeableConcept.coding.any { coding ->
-					findValue.hasCoding(coding.system, coding.code)
-				}
-			}
-	}
 
 }
 
@@ -375,7 +348,10 @@ enum class ComplicationsCovid19(val codeableConcept: CodeableConcept) {
 	MYOCARDIAL_INFARCTION(CodeableConcept(snomed("22298006", "Myocardial infarction (disorder)"))),
 	PRE_RENAL_ACUTE_KINDEY_INJURY(
 		CodeableConcept(
-			snomed("129561000119108", "Pre-renal acute kidney injury (disorder)")
+			snomed(
+				"129561000119108",
+				"Pre-renal acute kidney injury (disorder)"
+			)
 		)
 	),
 	//TODO: Add also ICD10 codes?

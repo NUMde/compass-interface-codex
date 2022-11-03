@@ -4,6 +4,7 @@ import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
@@ -48,8 +49,8 @@ object PemUtils {
 
     fun loadPublicKey(publicKeyFile: File): RSAPublicKey = loadPublicKey(publicKeyFile.readText())
 
-    fun loadPublicKey(publicKeyFile: String): RSAPublicKey {
-        val publicKeyContent = publicKeyFile.replace("\n", "").replace("\r", "")
+    fun loadPublicKey(publicKey: String): RSAPublicKey {
+        val publicKeyContent = publicKey.replace("\n", "").replace("\r", "")
             .replace("-----BEGIN PUBLIC KEY-----", "")
             .replace("-----END PUBLIC KEY-----", "")
 
@@ -137,6 +138,7 @@ class CompassDownloader(
 
 
 
+
     suspend fun retrieveAccessToken(): String {
         val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
         val currentDate = LocalDateTime.now().format(formatter)
@@ -154,12 +156,19 @@ class CompassDownloader(
         val base64RsaKeyString = String(encoder.encode(rsaEncryptedKey), StandardCharsets.UTF_8)
         log.trace { "retrieveAccessToken(): RSA-encrypted and base64-encoded key: $base64RsaKeyString" }
 
-        val response: TokenResponse = client.post("$serverUrl/api/auth/") {
+        val response = client.post("$serverUrl/api/auth/") {
             contentType(ContentType.Application.Json)
             setBody(AuthBody(encodedCipherText, base64RsaKeyString, encodedIv))
-        }.body()
-        log.debug { "retrieveAccessToken(): retrieved access token: ${response.access_token}" }
-        return response.access_token
+        }
+        if (response.status != HttpStatusCode.OK) {
+            val bodyAsText = response.bodyAsText()
+            log.error { "retrieveAccessToken(): Could not retrieve access token! ${response.status} $bodyAsText" }
+            error("Could not retrieve access token! Server responded $bodyAsText")
+        }
+
+        val tokenResponse: TokenResponse = response.body()
+        log.debug { "retrieveAccessToken(): retrieved access token: ${tokenResponse.access_token}" }
+        return tokenResponse.access_token
     }
 
 

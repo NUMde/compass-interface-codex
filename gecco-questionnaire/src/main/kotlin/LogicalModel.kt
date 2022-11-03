@@ -2,111 +2,6 @@ import org.hl7.fhir.r4.model.Coding
 import org.hl7.fhir.r4.model.MedicationStatement
 import java.time.LocalDate
 
-@Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
-annotation class FhirProfile(val url: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class Text(val text: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class SymptomEnum(val enum: Symptom)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabCRPEnum(val enum: LabCodes.CRP)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class AnaChronicNeurologicalOrMentalDisease(val enum: ChronicNeurologicalMentalDisease)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabFerritin(val enum: LabCodes.Ferritin)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabBilirubin(val enum: LabCodes.Bilirubin)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabLactateDehydrogenase(val enum: LabCodes.LactateDehydrogenase)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabCreatineMassPerVolume(val enum: LabCodes.Creatinine.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabCreatineMolesPerVolume(val enum: LabCodes.Creatinine.MolesPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabLactateMassPerVolume(val enum: LabCodes.Lactate.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabLactateMolesPerVolume(val enum: LabCodes.Lactate.MolesPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabLeukocytes(val enum: LabCodes.Leukocytes.CountPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabLymphocytes(val enum: LabCodes.Lymphocytes.CountPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabPartialThromboplastinTime(val enum: LabCodes.PartialThromboplastinTime)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabPlateletsCountPerVolume(val enum: LabCodes.Platelets.CountPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabTroponinTCardiacMassPerVolume(val enum: LabCodes.Troponin.TCardiac.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabTroponinICardiacMassPerVolume(val enum: LabCodes.Troponin.ICardiac.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabHemoglobinMassPerVolume(val enum: LabCodes.Hemoglobin.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabHemoglobinMolesPerVolume(val enum: LabCodes.Hemoglobin.MolesPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabAlbuminMassPerVolume(val enum: LabCodes.Albumin.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabAlbuminMolesPerVolume(val enum: LabCodes.Albumin.MolesPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabAntithrombin(val enum: LabCodes.Antithrombin)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabInterleukin6(val enum: LabCodes.Interleukin6.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabFibrinogen(val enum: LabCodes.Fibrinogen.MassPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabPPT(val enum: LabCodes.PartialThromboplastinTime)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabNeutrophils(val enum: LabCodes.Neutrophils.CountPerVolume)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabProcalcitonin(val enum: LabCodes.Procalcitonin)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabNatriureticPeptideB(val enum: LabCodes.NatriureticPeptideB)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class LabINR(val enum: LabCodes.INR)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class Quantity(val enum: LabCodes.INR)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class EnableWhenYes(val geccoId: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class EnableWhen(val geccoId: String, val system: String, val code: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class ComboBox()
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class Ignore()
-
 
 data class LogicalModel(
     @Text("Anamnese / Risikofaktoren")
@@ -212,67 +107,69 @@ data class Anamnesis(
 
 @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-lung-diseases")
 data class AnamnesisChronicLungDiseases(
-    @Text("Asthma")
+    @Text("Asthma") @ChronicLungDiseaseEnum(ChronicLungDisease.ASTHMA)
     var asthma: YesNoUnknown? = null,
-    @Text("COPD")
+    @Text("COPD") @ChronicLungDiseaseEnum(ChronicLungDisease.COPD)
     var copd: YesNoUnknown? = null,
-    @Text("Lungenfibrose")
+    @Text("Lungenfibrose") @ChronicLungDiseaseEnum(ChronicLungDisease.FIBROSIS)
     var fibrosis: YesNoUnknown? = null,
-    @Text("Lungenhochdruck/pulmonale Hypertonie")
+    @Text("Lungenhochdruck/pulmonale Hypertonie") @ChronicLungDiseaseEnum(ChronicLungDisease.PULMONARY_HYPERTENSION)
     var pulmonaryHypertension: YesNoUnknown? = null,
-    @Text("OHS")
+    @Text("OHS") @ChronicLungDiseaseEnum(ChronicLungDisease.OHS)
     var ohs: YesNoUnknown? = null,
-    @Text("Schlafapnoe")
+    @Text("Schlafapnoe") @ChronicLungDiseaseEnum(ChronicLungDisease.SLEEP_APNEA)
     var sleepApnea: YesNoUnknown? = null,
-    @Text("OSAS")
+    @Text("OSAS") @ChronicLungDiseaseEnum(ChronicLungDisease.OSAS)
     var osas: YesNoUnknown? = null,
-    @Text("Cystische Fibrose")
+    @Text("Cystische Fibrose") @ChronicLungDiseaseEnum(ChronicLungDisease.CYSTIC_FIBROSIS)
     var cysticFibrosis: YesNoUnknown? = null
 )
 
 @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/cardiovascular-diseases")
 data class AnamnesisCardiovascularDiseases(
-    @Text("Bluthochdruck")
+    @Text("Bluthochdruck") @CardiovascularDiseaseEnum(CardiovascularDiseases.HYPERTENSIVE_DISORDER_SYSTEMIC_ARTERIAL)
     var arterialHyptertension: YesNoUnknown? = null,
-    @Text("Zustand nach Herzinfarkt")
+    @Text("Zustand nach Herzinfarkt") @CardiovascularDiseaseEnum(CardiovascularDiseases.ZUSTAND_NACH_HERZINFARKT)
     var stateAfterHeartAttack: YesNoUnknown? = null,
-    @Text("Herzrhythmusstörungen")
+    @Text("Herzrhythmusstörungen") @CardiovascularDiseaseEnum(CardiovascularDiseases.CARDIAC_ARRHYTHMIA)
     var cardiacArrhytmia: YesNoUnknown? = null,
-    @Text("Herzinsuffizienz")
+    @Text("Herzinsuffizienz") @CardiovascularDiseaseEnum(CardiovascularDiseases.HEART_FAILURE)
     var heartFailure: YesNoUnknown? = null,
-    @Text("pAVK")
+    @Text("pAVK") @CardiovascularDiseaseEnum(CardiovascularDiseases.PERIPHERAL_ARTERIAL_OCCLUSIVE_DISEASE)
     var peripherialArterialOcclusiveDisease: YesNoUnknown? = null,
-    @Text("Zustand nach Revaskularisation")
+    @Text("Zustand nach Revaskularisation") @CardiovascularDiseaseEnum(CardiovascularDiseases.ZUSTAND_NACH_REVASKULARISATION)
     var stateAfterRevascularization: YesNoUnknown? = null,
-    @Text("Koronare Herzerkrankung (KHK)")
+    @Text("Koronare Herzerkrankung (KHK)") @CardiovascularDiseaseEnum(CardiovascularDiseases.CORONARY_ARTERIOSCLEROSIS)
     var coronaryArteriosclerosis: YesNoUnknown? = null,
-    @Text("Carotisstenose")
+    @Text("Carotisstenose") @CardiovascularDiseaseEnum(CardiovascularDiseases.CAROTID_ARTERY_STENOSIS)
     var carotidArteryStenosis: YesNoUnknown? = null,
 )
 
 @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-liver-diseases")
 data class AnamnesisChronicLiverDiseases(
-    @Text("Fettleber")
+    @Text("Fettleber") @ChronicLiverDiseaseEnum(ChronicLiverDiseases.STEATOSIS_OF_LIVER)
     var steatosisOfLiver: YesNoUnknown? = null,
-    @Text("Leberzirrhose")
+    @Text("Leberzirrhose") @ChronicLiverDiseaseEnum(ChronicLiverDiseases.CIRRHOSIS_OF_LIVER)
     var cirrhosisOfLiver: YesNoUnknown? = null,
-    @Text("Chronische infektiöse Hepatitis")
+    @Text("Chronische infektiöse Hepatitis") @ChronicLiverDiseaseEnum(ChronicLiverDiseases.CHRONIC_VIRAL_HEPATITIS)
     var chronicViralHepatitis: YesNoUnknown? = null,
-    @Text("Autoimmune Lebererkrankungen")
+    @Text("Autoimmune Lebererkrankungen") @ChronicLiverDiseaseEnum(ChronicLiverDiseases.AUTOIMMUNE_LIVER_DISEASE)
     var autoimmuneLiverDisease: YesNoUnknown? = null,
 )
 
 @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/rheumatological-immunological-diseases")
 data class AnamnesisRheumatologicalImmunologicalDiseases(
-    @Text("Chronisch entzündl. Darmerkrankung")
+    @Text("Chronisch entzündl. Darmerkrankung") @RheumatologicalImmunologicalDiseaseEnum(
+        RheumatologicalImmunologicalDiseases.INFLAMMATORY_BOWEL_DISEASE
+    )
     var inflammatoryBowelDisease: YesNoUnknown? = null,
-    @Text("Rheumatoide Arthritis")
+    @Text("Rheumatoide Arthritis") @RheumatologicalImmunologicalDiseaseEnum(RheumatologicalImmunologicalDiseases.RHEUMATOID_ARTHRITIS)
     var rheumatoidArthritis: YesNoUnknown? = null,
-    @Text("Kollagenosen")
+    @Text("Kollagenosen") @RheumatologicalImmunologicalDiseaseEnum(RheumatologicalImmunologicalDiseases.COLLAGENOSIS)
     var collagenosis: YesNoUnknown? = null,
-    @Text("Vaskulitiden")
+    @Text("Vaskulitiden") @RheumatologicalImmunologicalDiseaseEnum(RheumatologicalImmunologicalDiseases.VASCULITIS)
     var vasculitis: YesNoUnknown? = null,
-    @Text("angeborene Immundefekte")
+    @Text("angeborene Immundefekte") @RheumatologicalImmunologicalDiseaseEnum(RheumatologicalImmunologicalDiseases.CONGENITAL_IMMUNODEFICIENCY_DISEASE)
     var congenitalImmunodeficiencyDisease: YesNoUnknown? = null
 )
 

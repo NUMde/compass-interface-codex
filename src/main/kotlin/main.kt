@@ -209,7 +209,7 @@ suspend fun main(args: Array<String>) {
 
     if (parsedArgs.uploadQuestionnaires) {
         printAndFlush("POSTing Questionnaires to FHIR repository... ")
-        for ((url, q) in cache) {
+        for ((_, q) in cache) {
             client.create().resource(q).conditional()
                 .where(Questionnaire.URL.matches().value(q.url))
                 .and(Questionnaire.VERSION.exactly().code(q.version))

@@ -123,6 +123,11 @@ run `./gradlew shadowJar` after renaming your `custom-main.kt` to `main.kt`.
 Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are
 currently not supported.
 
+# Docker deployment
+
+* Rename `.env.sample` to `.env` and edit accordingly.
+* Execute `docker build -t compass-interface-codex . && docker run --env-file .env compass-interface-codex `
+
 # Special cases in the LogicalModel
 
 * `demographics.ageInYears`, `demographics.ageInMonth` and `demographics.birthDate` are interchangeable, just ask for
