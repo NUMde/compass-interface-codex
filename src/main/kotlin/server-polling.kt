@@ -4,8 +4,6 @@ import kotlinx.coroutines.delay
 import mu.KotlinLogging
 import org.hl7.fhir.r4.model.*
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 data class PollingArgs(
     val serverUrl: String = getEnv("COMPASS_BACKEND_URL"),
@@ -18,8 +16,7 @@ data class PollingArgs(
 
     val fhirmapperUrl: String = getEnv("FHIRSERVER"),
 
-    val pollingDuration: Duration = System.getenv("POLLING")?.let { Duration.parse(it) }
-        ?: 10.toDuration(DurationUnit.MINUTES)
+    val pollingDuration: Duration = Duration.parse(System.getenv("POLLING") ?: "10m")
 )
 
 private fun getEnv(s: String): String = System.getenv(s) ?: error("Please set env var '$s'")
@@ -110,6 +107,7 @@ private suspend fun pollingAction(
             uploadBundleEntries(bundle, queueItem, client)
         } catch (e: Exception) {
             log.error(e) { "Cannot upload $queueItem" }
+            e.printStackTrace()
         }
     }
     val accessToken = downloader.retrieveAccessToken()
@@ -150,12 +148,9 @@ private fun uploadBundleEntries(
                 }
             } catch (e: Exception) {
                 log.error(e) {
-                    "Cannot upload $resource (queueItem ${queueItem.UUID}): ${
-                        parser.encodeResourceToString(
-                            resource
-                        )
-                    }"
+                    "Cannot upload $resource (queueItem ${queueItem.UUID}): ${parser.encodeResourceToString(resource)}"
                 }
+                e.printStackTrace()
             }
         }
     }
