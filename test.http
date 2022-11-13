@@ -3,3 +3,7 @@ Content-Type: application/json
 
 < gecco-bundle-7bfc3b07-a97d-4e11-8ac6-b970c1745476.json
 
+###
+
+DELETE http://localhost:8888/fhir-bridge/fhir/Patient/6f1c1179-574b-4a47-a1f7-6a97e858a950
+Content-Type: application/json
