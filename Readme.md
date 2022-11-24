@@ -128,6 +128,9 @@ currently not supported.
 * Rename `.env.sample` to `.env` and edit accordingly.
 * Execute `docker build -t compass-interface-codex . && docker run --env-file .env compass-interface-codex `
 
+You can also pull & deploy the Docker image
+from [Docker Hub](https://hub.docker.com/repository/docker/wwuimi/compass-interface-codex).
+
 # Special cases in the LogicalModel
 
 * `demographics.ageInYears`, `demographics.ageInMonth` and `demographics.birthDate` are interchangeable, just ask for
