@@ -106,24 +106,23 @@ create a
 [transaction-Bundle](https://www.hl7.org/fhir/bundle.html#transaction) containing only the GECCO resources instead.
 
 ## ehrbase & fhir-bridge
+
 If you want to use the [fhir-bridge](https://github.com/ehrbase/fhir-bridge) endpoint instead of a traditional FHIR
 repository, please use only the `--uploadBundleEntries` and the `--noComposition` option.
 
-The direct transfer to the CODEX platform is not yet supported as there are currently no SOPs for that, but we are
-working on that.
+## CODEX+
+
+If you want to deploy the compass-interface as part of the CODEX RDP platform, please use
+the [Helm Charts](https://imigitlab.uni-muenster.de/published/compass-interface-codex-helm).
 
 ## Custom scenarios
+
 To be more flexible, you can easily set up an IDE for Kotlin development (I recommend IntelliJ Community), checkout this
 repository and edit `src/main/kotlin/custom-main.kt`. To execute, you could use either the IDE or the command
 `./gradlew :run -PmainClass=Custom_mainKt --args='your args go here if any'`. If you want to create an executable .jar,
 run `./gradlew shadowJar` after renaming your `custom-main.kt` to `main.kt`.
 
-# Current limitations
-
-Since the focus of Compass is on PROs (patient reported outcomes), medication and lab module of the GECCO dataset are
-currently not supported.
-
-# Docker deployment
+## 🐳 Docker deployment
 
 * Rename `.env.sample` to `.env` and edit accordingly.
 * Execute `docker build -t compass-interface-codex . && docker run --env-file .env compass-interface-codex `

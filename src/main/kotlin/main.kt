@@ -1,4 +1,5 @@
 import ca.uhn.fhir.context.FhirContext
+import ca.uhn.fhir.parser.IParser
 import ca.uhn.fhir.rest.client.api.IGenericClient
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor
 import com.xenomachina.argparser.ArgParser
@@ -197,7 +198,7 @@ suspend fun main(args: Array<String>) {
 
             if (parsedArgs.uploadBundleEntries) {
                 println("  Uploading Bundle entries to FHIR repository... ")
-                uploadBundleEntries(bundle, queueItem, client)
+                uploadBundleEntries(bundle, queueItem, client, parser)
                 println("SUCCESS")
             }
             println()
@@ -222,7 +223,8 @@ suspend fun main(args: Array<String>) {
 private fun uploadBundleEntries(
     bundle: Bundle,
     queueItem: QueueItem,
-    client: IGenericClient
+    client: IGenericClient,
+    parser: IParser
 ) {
     var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it
     for ((index, entry) in bundle.entry.withIndex()) {

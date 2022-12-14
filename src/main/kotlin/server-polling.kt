@@ -1,10 +1,15 @@
 import ca.uhn.fhir.context.FhirContext
+import ca.uhn.fhir.parser.IParser
 import ca.uhn.fhir.rest.client.api.IGenericClient
+import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor
 import kotlinx.coroutines.delay
 import mu.KotlinLogging
 import org.hl7.fhir.r4.model.*
+import java.time.ZonedDateTime
 import kotlin.time.Duration
 
+private fun getEnv(varname: String): String = System.getenv(varname) ?: error("Please set env var '$varname'")
+private fun sanitize(s: String): String = s.replace("\\n", "\n").removeSurrounding("'")
 data class PollingArgs(
     val serverUrl: String = getEnv("COMPASS_BACKEND_URL"),
     val apiId: String = getEnv("COMPASS_API_ID"),
@@ -15,24 +20,24 @@ data class PollingArgs(
     val certificate: String = sanitize(getEnv("CERTIFICATE")),
 
     val fhirmapperUrl: String = getEnv("FHIRSERVER"),
+    val fhirAuthUser: String? = System.getenv("FHIR_USER"),
+    val fhirAuthPassword: String? = System.getenv("FHIR_PASSWORD"),
 
     val pollingDuration: Duration = Duration.parse(System.getenv("POLLING") ?: "10m")
 )
 
-private fun getEnv(s: String): String = System.getenv(s) ?: error("Please set env var '$s'")
-private fun sanitize(s: String): String = s.replace("\\n", "\n").removeSurrounding("'")
 
 private val log = KotlinLogging.logger {}
 
 suspend fun main() {
-
     val args = PollingArgs()
-    val pollingDuration = args.pollingDuration
 
     val ctx = FhirContext.forR4()
-//    val fhirServerBase = parsedArgs.targetFhirRepository
+    val parser = ctx.newJsonParser()
     val client = ctx.newRestfulGenericClient(args.fhirmapperUrl).apply {
-//            parsedArgs.basicAuth?.let{ registerInterceptor(BasicAuthInterceptor(it.substringBeforeLast(":"), it.substringAfterLast(":"))) }
+        if (args.fhirAuthUser != null) {
+            registerInterceptor(BasicAuthInterceptor(args.fhirAuthUser, args.fhirAuthPassword))
+        }
     }
 
 
@@ -45,11 +50,12 @@ suspend fun main() {
         cert = PemUtils.loadCert(args.certificate)
     )
 
-    val cache = mutableMapOf<String, Questionnaire>()
+    val questionnaireCache = mutableMapOf<String, Questionnaire>()
+    val pollingDuration = args.pollingDuration
 
     while (true) {
-        pollingAction(downloader, cache, args, client)
-        println("Waiting for $pollingDuration")
+        pollingAction(downloader, questionnaireCache, args.fhirmapperUrl, client, parser)
+        println("${ZonedDateTime.now()} Waiting for $pollingDuration")
         delay(pollingDuration)
     }
 
@@ -59,8 +65,9 @@ suspend fun main() {
 private suspend fun pollingAction(
     downloader: CompassDownloader,
     cache: MutableMap<String, Questionnaire>,
-    args: PollingArgs,
-    client: IGenericClient
+    fhirServerUrl: String,
+    client: IGenericClient,
+    parser: IParser
 ) {
     suspend fun retrieveQuestionnaire(qr: QuestionnaireResponse): Questionnaire {
         val canonical = qr.questionnaire
@@ -69,10 +76,9 @@ private suspend fun pollingAction(
             val version = canonical.substringAfterLast("|")
             log.info { "Retrieving corresponding Questionnaire '${qr.questionnaire}' from server" }
             val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(
-                url,
-                version,
-                downloader.retrieveAccessToken()
+                url, version, downloader.retrieveAccessToken()
             )
+            println("questionnaireJson = " + questionnaireJson)
             val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
             cache[canonical] = questionnaire
             log.info { "Retrieving Questionnaire '${qr.questionnaire}' successful" }
@@ -82,6 +88,10 @@ private suspend fun pollingAction(
 
 
     val queueItems = downloader.retrieveAllQueueItems() //TODO: Only retrieve new values, do this regulary
+    if (queueItems.isEmpty()) {
+        log.info { "No new queue items!" }
+        println("No new queue items!")
+    }
     for (queueItem in queueItems) {
         try {
             val decryptedQueueItem = downloader.decryptQueueItem(queueItem)
@@ -97,16 +107,17 @@ private suspend fun pollingAction(
             val bundleBuilder = TransactionBundleBuilder()
             val bundle = logicalModelToGeccoProfile(
                 logicalModel,
-                IdType(queueItem.SubjectId).withServerBase(args.fhirmapperUrl, "Patient"),
+                IdType(queueItem.SubjectId).withServerBase(fhirServerUrl, "Patient"),
                 DateTimeType(queueItem.AbsendeDatum),
                 bundleBuilder
             )
             bundle.id = queueItem.UUID
             bundle.identifier.value = queueItem.UUID
 
-            uploadBundleEntries(bundle, queueItem, client)
+            uploadBundleEntries(bundle, queueItem, client, parser)
         } catch (e: Exception) {
             log.error(e) { "Cannot upload $queueItem" }
+            println(e)
             e.printStackTrace()
         }
     }
@@ -117,7 +128,8 @@ private suspend fun pollingAction(
 private fun uploadBundleEntries(
     bundle: Bundle,
     queueItem: QueueItem,
-    client: IGenericClient
+    client: IGenericClient,
+    parser: IParser,
 ) {
     var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it
     for (resource in bundle.entry.map { it.resource }) {
