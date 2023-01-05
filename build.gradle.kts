@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.0"
     application
     id("maven-publish")
-    id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 buildscript {
@@ -38,6 +38,7 @@ dependencies {
 
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
+    implementation("ca.uhn.hapi.fhir:hapi-fhir-validation:$hapiVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
