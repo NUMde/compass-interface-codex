@@ -311,11 +311,9 @@ fun main() {
 
 		addCreateEntry(RespiratoryOutcome(patientRef, dateTimeOfDocumentation, ConditionVerificationStatus.REFUTED))
 		addCreateEntry(TypeOfDischarge(patientRef, TypeOfDischarge.ALIVE))
-		for (i in 1 until 1) {
-			addCreateEntry(
-				FollowUpSwipeResults(patientRef, DetectedNotDetectedInconclusive.INCONCLUSIVE, LocalDate.now())
-			)
-		}
+		addCreateEntry(
+			FollowUpSwipeResults(patientRef, DetectedNotDetectedInconclusive.INCONCLUSIVE, LocalDate.now())
+		)
 
 		addCreateEntry(StudyInclusionDueToCovid19(patientRef, YesNoUnknownOtherNa.UNKNOWN))
 		addCreateEntry(InterventionalStudiesParticipation(patientRef, YesNoUnknownOtherNa.UNKNOWN))
@@ -411,11 +409,7 @@ fun GeccoPatient(
 	}
 
 	return Patient().apply {
-		meta = Meta().apply {
-			profile = listOf(
-				CanonicalType("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/Patient"),
-			)
-		}
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/Patient")
 		setId(patientId)
 		identifier = listOf()
 		if (ageInYears != null) {
@@ -462,8 +456,7 @@ fun AnaChronicLungDisease(
 	recordedDate: DateTimeType
 ) =
 	Anamnese(patientRef, chronicLungDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-lung-diseases") //TODO: FIXME
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-lung-diseases") //TODO: FIXME
 		category = listOf(CodeableConcept(snomed("418112009", "Pulmonary medicine")))
 	}
 
@@ -474,8 +467,7 @@ fun AnaCardiovascular(
 	recordedDate: DateTimeType,
 ) =
 	Anamnese(patientRef, cardiovascularDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/cardiovascular-diseases") //TODO: FIXME
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/cardiovascular-diseases") //TODO: FIXME
 		category = listOf(CodeableConcept(snomed("722414000", "Vascular medicine")))
 	}
 
@@ -486,8 +478,7 @@ fun AnaChronicLiver(
 	recordedDate: DateTimeType
 ) =
 	Anamnese(patientRef, chronicLiverDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-liver-diseases")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-liver-diseases")
 		category = listOf(CodeableConcept(snomed("408472002", "Hepatology")))
 	}
 
@@ -497,11 +488,13 @@ fun AnaRheumaticImmunological(
 	yesNoUnknown: YesNoUnknown,
 	recordedDate: DateTimeType
 ) = Anamnese(patientRef, rheumatologicalImmunologicalDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/rheumatological-immunological-diseases")
-	category = listOf(CodeableConcept().apply {
-		coding = listOf(snomed("394810000", "Rheumatology"), snomed("408480009", "Clinical immunology"))
-	})
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/rheumatological-immunological-diseases")
+	category = listOf(
+		CodeableConcept(
+			snomed("394810000", "Rheumatology"),
+			snomed("408480009", "Clinical immunology")
+		)
+	)
 }
 
 fun AnaChronicNeurologicalMental(
@@ -510,11 +503,13 @@ fun AnaChronicNeurologicalMental(
 	yesNoUnknown: YesNoUnknown,
 	recordedDate: DateTimeType
 ) = Anamnese(patientRef, disease.codeableConcept, yesNoUnknown, recordedDate).apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-neurological-mental-diseases")
-	category = listOf(CodeableConcept().apply {
-		coding = listOf(snomed("394591006", "Neurology"), snomed("394587001", "Psychiatry"))
-	})
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-neurological-mental-diseases")
+	category = listOf(
+		CodeableConcept(
+			snomed("394591006", "Neurology"),
+			snomed("394587001", "Psychiatry")
+		)
+	)
 }
 
 fun AnaHIV(patientRef: Reference, yesNoUnknown: YesNoUnknown, recordedDate: DateTimeType) =
@@ -525,13 +520,12 @@ fun AnaHIV(patientRef: Reference, yesNoUnknown: YesNoUnknown, recordedDate: Date
 		yesNoUnknown,
 		recordedDate,
 	).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/human-immunodeficiency-virus-infection")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/human-immunodeficiency-virus-infection")
 		category = listOf(CodeableConcept(snomed("394807007", "Infectious diseases (specialty)")))
 	}
 
 fun AnaSmoking(patientRef: Reference, smokingStatus: SmokingStatus, recordedDate: DateTimeType) = Observation().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/smoking-status")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/smoking-status")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 	code = CodeableConcept(loinc("72166-2", "Tobacco smoking status"))
@@ -541,7 +535,7 @@ fun AnaSmoking(patientRef: Reference, smokingStatus: SmokingStatus, recordedDate
 }
 
 fun ObservationLab(patientRef: Reference, coding: Coding, quantity: Quantity, recordedDate: DateTimeType) = Observation().apply {
-	meta = Meta().addProfile("https://www.medizininformatik-initiative.de/fhir/core/modul-labor/StructureDefinition/ObservationLab")
+	meta.addProfile("https://www.medizininformatik-initiative.de/fhir/core/modul-labor/StructureDefinition/ObservationLab")
 	status = Observation.ObservationStatus.FINAL
 	code = CodeableConcept(coding)
 	subject = patientRef
@@ -557,16 +551,14 @@ fun AnaGastrointestinalUlcers(patientRef: Reference, yesNoUnknown: YesNoUnknown,
 		yesNoUnknown,
 		recordedDate
 	).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/gastrointestinal-ulcers")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/gastrointestinal-ulcers")
 		category = listOf(CodeableConcept(snomed("394584008", "Gastroenterology")))
 	}
 
 
 fun AnaRespiratoryTherapy(patientRef: Reference, yesNoUnknown: YesNoUnknown, performedDt: DateTimeType) =
 	Procedure().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/respiratory-therapies")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/respiratory-therapies")
 		category = CodeableConcept(snomed("277132007", "Therapeutic procedure (procedure)"))
 		code = CodeableConcept(snomed("53950000", "Respiratory therapy (procedure)"))
 		subject = patientRef
@@ -584,8 +576,7 @@ fun AnaChronicKidneyDisease(
 	chronicKidneyDisease: ChronicKidneyDisease,
 	recordedDate: DateTimeType
 ) = Condition().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-kidney-diseases")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-kidney-diseases")
 	category = listOf(CodeableConcept(snomed("394589003", "Nephrology (qualifier value)")))
 	subject = patientRef
 
@@ -614,8 +605,7 @@ fun AnaTransplant(
 		yesNoUnknown,
 		recordedDate
 	).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/organ-recipient")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/organ-recipient")
 		category = listOf(CodeableConcept(snomed("788415003", "Transplant medicine")))
 		//TODO: Wie ist das gemeint? Alle transplantierten Organe in eine Ressource oder für jedes Organ eine eigene?
 		if (organ != null) {
@@ -625,14 +615,12 @@ fun AnaTransplant(
 
 fun AnaDiabetes(patientRef: Reference, diabetes: Diabetes, yesNoUnknown: YesNoUnknown, recordedDate: DateTimeType) =
 	Anamnese(patientRef, diabetes.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diabetes-mellitus")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diabetes-mellitus")
 		category = listOf(CodeableConcept(snomed("408475000", "Diabetic medicine")))
 	}
 
 fun AnaCancer(patientRef: Reference, cancerStatus: CancerStatus, recordedDate: DateTimeType) = Condition().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/malignant-neoplastic-disease")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/malignant-neoplastic-disease")
 	category = listOf(CodeableConcept(snomed("394593009", "Medical oncology (qualifier value)")))
 	code = CodeableConcept(snomed("363346000", "Malignant neoplastic disease"))
 	subject = patientRef
@@ -663,7 +651,7 @@ fun AnaHistoryOfTravel(patientRef: Reference,
 					   city: String? = null,
 					   from: Date? = null,
 					   till: Date? = null) = Observation().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/history-of-travel")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/history-of-travel")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 	code = CodeableConcept().apply {
@@ -745,7 +733,7 @@ fun AnaDNR(patientRef: Reference, resuscitation: Resuscitation) = Consent().appl
 }
 
 fun Vaccination(patientRef: Reference, disease: ImmunizationDisease, occurenceDt: DateTimeType) = Immunization().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
 	occurrence = occurenceDt
 	status = Immunization.ImmunizationStatus.COMPLETED
 	patient = patientRef
@@ -758,7 +746,7 @@ fun Vaccination(patientRef: Reference, disease: ImmunizationDisease, occurenceDt
 }
 
 fun VaccinationCovid19(patientRef: Reference, vaccine: Covid19Vaccine, occurenceDt: DateTimeType) = Immunization().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
 	occurrence = occurenceDt
 	status = Immunization.ImmunizationStatus.COMPLETED
 	patient = patientRef
@@ -771,7 +759,7 @@ fun VaccinationCovid19(patientRef: Reference, vaccine: Covid19Vaccine, occurence
 }
 
 fun NoKnownVaccinations(patientRef: Reference) = Immunization().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/immunization")
 	occurrence = unknownDateTime()
 	status = Immunization.ImmunizationStatus.NOTDONE
 	patient = patientRef
@@ -789,8 +777,7 @@ fun NoKnownVaccinations(patientRef: Reference) = Immunization().apply {
 //TODO: Werden Antikoerpertests am UKM überhaupt eingesetzt?
 fun ErregernachweisPCR(patientRef: Reference, detectedInconclusive: DetectedNotDetectedInconclusive) =
 	Observation().apply { //TODO: Extract elements from MII LabratoryObservation profile and create a template
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/sars-cov-2-rt-pcr")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/sars-cov-2-rt-pcr")
 		identifier = listOf(
 			Identifier().apply {
 				type = CodeableConcept(
@@ -824,10 +811,7 @@ fun ErregernachweisPCR(patientRef: Reference, detectedInconclusive: DetectedNotD
 
 
 fun FrailtyScore(patientRef: Reference, frailityScore: FrailityScore) = Observation().apply {
-	meta = Meta().apply {
-		profile =
-			listOf(CanonicalType("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/frailty-score"))
-	}
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/frailty-score")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.SURVEY.codeableConcept)
 	code = CodeableConcept().apply {
@@ -840,7 +824,7 @@ fun FrailtyScore(patientRef: Reference, frailityScore: FrailityScore) = Observat
 }
 
 fun BodyWeight(patientRef: Reference, weightInKg: Double, effectiveDt: Period) = Observation().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/body-weight")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/body-weight")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.VITAL_SIGNS.codeableConcept)
 	code = CodeableConcept().apply {
@@ -856,7 +840,7 @@ fun BodyWeight(patientRef: Reference, weightInKg: Double, effectiveDt: Period) =
 }
 
 fun BodyHeight(patientRef: Reference, heightInCm: Double, effectiveDt: Period) = Observation().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/body-height")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/body-height")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.VITAL_SIGNS.codeableConcept)
 	code = CodeableConcept().apply {
@@ -881,8 +865,7 @@ fun PregnancyStatus(patientRef: Reference, yesNoUnknown: YesNoUnknown, effective
 
 fun PregnancyStatus(patientRef: Reference, pregnancyStatus: PregnancyStatus, effectiveDt: DateTimeType) =
 	Observation().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pregnancy-status")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pregnancy-status")
 		status = Observation.ObservationStatus.FINAL
 		code = CodeableConcept(loinc("82810-3", "Pregnancy status"))
 		subject = patientRef
@@ -892,7 +875,7 @@ fun PregnancyStatus(patientRef: Reference, pregnancyStatus: PregnancyStatus, eff
 	}
 
 fun KnownExposure(patientRef: Reference, yesNoUnknown: YesNoUnknown) = Observation().apply {
-	meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/known-exposure")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/known-exposure")
 	category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 	code = CodeableConcept(loinc("88636-6", "Known exposure [Identifier]"))
 	status = Observation.ObservationStatus.FINAL
@@ -911,8 +894,7 @@ fun Complications(
 	yesNoUnknown: YesNoUnknown,
 	recordedDate: DateTimeType
 ) = Condition().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/complications-covid-19")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/complications-covid-19")
 	code = complicationsCovid19.codeableConcept
 	recordedDateElement = recordedDate
 	category = listOf(CodeableConcept(snomed("116223007", "Complication (disorder)")))
@@ -926,8 +908,7 @@ fun Complications(
 
 fun DiagnosisCovid19(patientRef: Reference, stageAtDiagnosis: StageAtDiagnosis, recordedDate: DateTimeType) =
 	Condition().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diagnosis-covid-19")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diagnosis-covid-19")
 		//TODO is this shared with some other element?
 		category = listOf(CodeableConcept(snomed("394807007", "Infectious diseases (specialty) (qualifier value)")))
 		code = CodeableConcept(
@@ -948,8 +929,7 @@ fun Symptom(
 	recordedDate: DateTimeType,
 	severity: SymptomSeverity? = null
 ) = Condition().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/symptoms-covid-19")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/symptoms-covid-19")
 	category = listOf(CodeableConcept(loinc("75325-1", "Symptom")))
 	code = symptom.codeableConcept
 	recordedDateElement = recordedDate
@@ -967,8 +947,7 @@ fun Symptom(
 
 fun RespiratoryOutcome(patientRef: Reference, recordedDate: DateTimeType, response: ConditionVerificationStatus) =
 	Condition().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/dependence-on-ventilator")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/dependence-on-ventilator")
 		category = listOf(CodeableConcept(snomed("404989005", "Ventilation status (observable entity)")))
 		code = CodeableConcept(snomed("444932008", "Dependence on ventilator (finding)"))
 		recordedDateElement = recordedDate
@@ -977,8 +956,7 @@ fun RespiratoryOutcome(patientRef: Reference, recordedDate: DateTimeType, respon
 	}
 
 fun TypeOfDischarge(patientRef: Reference, typeOfDischarge: TypeOfDischarge) = Observation().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/discharge-disposition")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/discharge-disposition")
 	status = Observation.ObservationStatus.FINAL
 	category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 	code = CodeableConcept().apply {
@@ -992,23 +970,17 @@ fun TypeOfDischarge(patientRef: Reference, typeOfDischarge: TypeOfDischarge) = O
 
 
 fun Therapy(patientRef: Reference, therapy: Therapies, yesNoUnknown: YesNoUnknown) = Procedure().apply {
-	meta = Meta().addProfile(therapy.profile)
+	meta.addProfile(therapy.profile)
 	category = therapy.category
 	code = therapy.codeableConcept
 	subject = patientRef
 
-	performed = DateTimeType().apply {
-		extension = listOf(
-			Extension(
-				"http://hl7.org/fhir/StructureDefinition/data-absent-reason", CodeType(
-					when (yesNoUnknown) {
-						YES, UNKNOWN -> DataAbsentReason.UNKNOWN.toCode()
-						NO -> DataAbsentReason.NOTPERFORMED.toCode()
-					}
-				)
-			)
-		)
-	}
+	performedDateTimeType.addExtension("http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+		when (yesNoUnknown) {
+			YES, UNKNOWN -> DataAbsentReason.UNKNOWN
+			NO -> DataAbsentReason.NOTPERFORMED
+		}.let { CodeType(it.toCode()) }
+	)
 	status = when (yesNoUnknown) {
 		YES -> Procedure.ProcedureStatus.INPROGRESS
 		NO -> Procedure.ProcedureStatus.NOTDONE
@@ -1019,19 +991,17 @@ fun Therapy(patientRef: Reference, therapy: Therapies, yesNoUnknown: YesNoUnknow
 
 fun isPatientInIntensiveCareUnit(patientRef: Reference, yesNoUnknown: YesNoUnknown, start: Date, end: Date) =
 	Observation().apply {
-		meta = Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/patient-in-icu")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/patient-in-icu")
 		category = listOf(ObservationCategory.SOCIAL_HISTORY.codeableConcept)
 		status = Observation.ObservationStatus.FINAL
 		subject = patientRef
-		code = CodeableConcept().apply {
-			coding = listOf(
-				Coding(
-					"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/ecrf-parameter-codes",
-					"01",
-					"Is the patient in the intensive care unit?"
-				)
+		code = CodeableConcept(
+			Coding(
+				"https://www.netzwerk-universitaetsmedizin.de/fhir/CodeSystem/ecrf-parameter-codes",
+				"01",
+				"Is the patient in the intensive care unit?"
 			)
-		}
+		)
 		this.effective =
 			Period().apply { //TODO: Nachfragen, ob es nicht mehr Sinn macht, diese Angabe nur bei ICU-Aufenthalt zu setzen?
 				this.start = start
@@ -1049,8 +1019,7 @@ fun isPatientInIntensiveCareUnit(patientRef: Reference, yesNoUnknown: YesNoUnkno
 
 fun VentilationType(patientRef: Reference, ventilationTypes: VentilationTypes, begin: DateTimeType, end: DateTimeType) =
 	Procedure().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/respiratory-therapies")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/respiratory-therapies")
 		status = ventilationTypes.status
 		category = CodeableConcept(snomed("277132007", "Therapeutic procedure (procedure)"))
 		code = CodeableConcept(ventilationTypes.code)
@@ -1072,8 +1041,7 @@ fun FollowUpSwipeResults(
 
 fun MediCovid19(patientRef: Reference, medicationCovid19: MedicationCovid19, effectiveDt: DateTimeType) =
 	MedicationStatement().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
 		status = MedicationStatement.MedicationStatementStatus.ACTIVE
 		medication = CodeableConcept().apply {
 			coding = listOf(medicationCovid19.snomed ?: medicationCovid19.num)
@@ -1088,8 +1056,7 @@ fun MediACEInhibitor(
 	pStatus: MedicationStatement.MedicationStatementStatus,
 	effectiveDt: DateTimeType
 ) = MedicationStatement().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
 	status = pStatus
 	medication = CodeableConcept().apply {
 		coding = listOf(
@@ -1104,8 +1071,7 @@ fun MediACEInhibitor(
 
 fun MediImmunoglobulins(patientRef: Reference, yesNoUnknown: YesNoUnknown, effectiveDt: DateTimeType) =
 	MedicationStatement().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
 		status = when (yesNoUnknown) {
 			YES -> MedicationStatement.MedicationStatementStatus.ACTIVE
 			NO -> MedicationStatement.MedicationStatementStatus.NOTTAKEN
@@ -1124,26 +1090,21 @@ fun MediImmunoglobulins(patientRef: Reference, yesNoUnknown: YesNoUnknown, effec
 
 fun MediAntiCoag(patientRef: Reference, medi: AntiCoagulant, effectiveDt: DateTimeType, intent: TherapeuticIntent?) =
 	MedicationStatement().apply {
-		meta =
-			Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pharmacological-therapy")
 		status = MedicationStatement.MedicationStatementStatus.ACTIVE
-		medication = CodeableConcept().apply {
-			coding = listOf(
-				snomed("81839001", "Medicinal product acting as anticoagulant agent (product)"),
-				medi.code
-			)
-		}
+		medication = CodeableConcept(
+			snomed("81839001", "Medicinal product acting as anticoagulant agent (product)"),
+			medi.code
+		)
 		subject = patientRef
 		effective = effectiveDt
-		//TODO: Intent fehlt im ORBIS-Formular
 		if (intent != null) {
 			reasonCode = listOf(intent.codeableConcept)
 		}
 	}
 
 fun StudyInclusionDueToCovid19(patientRef: Reference, yesNoUnknown: YesNoUnknownOtherNa) = Observation().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/study-inclusion-covid-19")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/study-inclusion-covid-19")
 	category = listOf(ObservationCategory.SURVEY.codeableConcept)
 	code = CodeableConcept().apply {
 		coding = listOf(
@@ -1169,8 +1130,7 @@ fun StudyInclusionDueToCovid19(patientRef: Reference, yesNoUnknown: YesNoUnknown
 }
 
 fun ImagingProcedure(patientRef: Reference, imaging: Imaging, performed: DateTimeType) = Procedure().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/radiology-procedures")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/radiology-procedures")
 	status = Procedure.ProcedureStatus.COMPLETED
 	category = CodeableConcept(snomed("103693007", "Diagnostic procedure (procedure)"))
 	code = imaging.codeableConcept
@@ -1180,16 +1140,13 @@ fun ImagingProcedure(patientRef: Reference, imaging: Imaging, performed: DateTim
 }
 
 fun ImagingFinding(patientRef: Reference, finding: RadiologicFindings) = DiagnosticReport().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diagnostic-report-radiology")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/diagnostic-report-radiology")
 	status = DiagnosticReport.DiagnosticReportStatus.FINAL
 	category = listOf(
 		CodeableConcept(
-			loinc(
-				"18726-0",
-				"Radiology studies (set)"
-			)
-		).addCoding(Coding("http://terminology.hl7.org/CodeSystem/v2-0074", "RAD", "Radiology"))
+			loinc("18726-0", "Radiology studies (set)"),
+			Coding("http://terminology.hl7.org/CodeSystem/v2-0074", "RAD", "Radiology")
+		)
 	)
 	code = CodeableConcept(loinc("18748-4", "Diagnostic imaging study"))
 	subject = patientRef
@@ -1203,8 +1160,7 @@ fun InterventionalStudiesParticipation(
 	eudraCT: String? = null,
 	nct: String? = null
 ) = Observation().apply {
-	meta =
-		Meta().addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/interventional-clinical-trial-participation")
+	meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/interventional-clinical-trial-participation")
 	category = listOf(ObservationCategory.SURVEY.codeableConcept)
 	code = CodeableConcept().apply {
 		coding = listOf(

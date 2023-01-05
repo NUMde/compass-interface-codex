@@ -1110,7 +1110,7 @@ private fun GeccoBundleBuilder.addMediAntiCoag(
     antiCoagulant: AntiCoagulant,
     yesNoUnknownWithIntent: YesNoUnknownWithIntent?
 ) {
-    if (yesNoUnknownWithIntent != null && yesNoUnknownWithIntent!!.administration == YesNoUnknown.YES) {
+    if (yesNoUnknownWithIntent != null && yesNoUnknownWithIntent.administration == YesNoUnknown.YES) {
         add(MediAntiCoag(patientRef, antiCoagulant, unknownDateTime(), yesNoUnknownWithIntent.intent))
     }
 }

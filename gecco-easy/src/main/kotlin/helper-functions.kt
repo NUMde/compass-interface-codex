@@ -38,3 +38,12 @@ fun iso3155DE(code: String, display: String) = Coding("urn:iso:std:iso:3166-2:de
 
 fun org.hl7.fhir.r4.model.codesystems.ObservationCategory.toCoding() =
     Coding(this.system, this.toCode(), this.display)
+
+fun CodeableConcept(coding: Coding, coding2: Coding, vararg codings: Coding): CodeableConcept {
+    return CodeableConcept(coding).apply {
+        addCoding(coding2)
+        for (coding in codings) {
+            addCoding(coding)
+        }
+    }
+}
