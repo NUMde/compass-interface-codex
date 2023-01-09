@@ -1,6 +1,8 @@
 import org.hl7.fhir.r4.model.*
 
-
+/**
+ * Sample Device resource as required by 'compass-num-conformance-checker' to issue a PDF validation certificate.
+ */
 fun App() = Device().apply {
     deviceName = listOf(Device.DeviceDeviceNameComponent().apply {
          name = "Example Covid-19 App"
@@ -10,6 +12,9 @@ fun App() = Device().apply {
     version = listOf(Device.DeviceVersionComponent(StringType("1.0.0")))
 }
 
+/**
+ * Sample Organization resource for 'compass-num-conformance-checker'
+ */
 fun Author() = Organization().apply {
     name = "Klinik für Infektiologie - Universitätsklinikum Beispielstadt"
     telecom = listOf(ContactPoint().apply {

@@ -15,8 +15,7 @@ fun main() {
     val ctx = FhirContext.forR4()
     val parser = ctx.newJsonParser().setPrettyPrint(true)
 
-    val questionnaire =
-        parser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
+    val questionnaire = parser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
 
     val fileContent = LogicalModel::class.java.getResource("/generated-response.json").readText()
     val qr = parser.parseResource(fileContent) as QuestionnaireResponse
@@ -59,8 +58,8 @@ fun logicalModelToGeccoProfile(
         if (ageInYears != null && logicalModel.demographics.dateOfBirth == null) {
             patient.birthDateElement = logicalModel.demographics.dateOfBirth?.toFhir()
                 ?: logicalModel.demographics.ageInMonth?.let {
-                    DateType(now.minusMonths(it.toLong()).toString().substring(0, 7))
-                } ?: DateType((now.year - ageInYears).toString())
+                    DateType(recordedDate.toLocalDateTime().minusMonths(it.toLong()).toString().substring(0, 7))
+                } ?: DateType((recordedDate.year - ageInYears).toString())
         } else if (logicalModel.demographics.dateOfBirth != null) {
             patient.birthDateElement = logicalModel.demographics.dateOfBirth!!.toFhir()
         }

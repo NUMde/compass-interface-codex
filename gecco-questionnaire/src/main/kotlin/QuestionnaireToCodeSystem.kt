@@ -7,7 +7,7 @@ import org.hl7.fhir.r4.model.Enumerations
 
 val codeSystem = CodeSystem().apply {
     id = "CompassGeccoItem"
-    url = COMPASS_GECCO_ITEM_CS //TODO
+    url = COMPASS_GECCO_ITEM_CS
     version = "1.0"
     title = "CompassGeccoItem"
     status = Enumerations.PublicationStatus.ACTIVE
@@ -21,8 +21,9 @@ val codeSystem = CodeSystem().apply {
     count = concept.size
 }
 
-
+/**
+ * This class creates a FHIR CodeSystem resource for all CompassGeccoItem codes in the sample questionnaire
+ */
 fun main() {
     println(FhirContext.forR4().newJsonParser().setPrettyPrint(true).encodeResourceToString(codeSystem))
-
 }

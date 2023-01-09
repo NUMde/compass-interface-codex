@@ -1,10 +1,21 @@
 import org.hl7.fhir.r4.model.*
 
 interface GeccoBundleBuilder {
+    /**
+     * Add resource to Bundle
+     */
     fun add(resource: Resource)
+
+    /**
+     * Retrieve resulting Bundle
+     */
     val bundle: Bundle
 }
 
+/**
+ * Creates plain Bundle with Bundle.type = 'transaction' that simply POSTs all entries to the server.
+ * To use with any FHIR server.
+ */
 class TransactionBundleBuilder : GeccoBundleBuilder {
     override val bundle: Bundle = Bundle().apply {
         type = Bundle.BundleType.TRANSACTION
@@ -22,7 +33,11 @@ class TransactionBundleBuilder : GeccoBundleBuilder {
     }
 }
 
-
+/**
+ * Creates a Bundle with Bundle.type = "document" and the Organization, App and Composition resources as required
+ * by the validation server.
+ * see https://github.com/NUMde/compass-num-conformance-checker/blob/main/docs/README.md#input-format-2 for more info
+ */
 class ValidationServerBundleBuilder(author: Organization, app: Device, questionnaire: Questionnaire) :
     GeccoBundleBuilder {
     override val bundle: Bundle = Bundle()

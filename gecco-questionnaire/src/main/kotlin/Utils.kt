@@ -1,7 +1,9 @@
+import org.hl7.fhir.r4.model.DateTimeType
 import org.hl7.fhir.r4.model.DateType
 import org.hl7.fhir.r4.model.Questionnaire
 import org.hl7.fhir.r4.model.QuestionnaireResponse
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.*
 
@@ -27,6 +29,9 @@ val QRItem.allItems: List<QRItem>
     get() = this.item + this.item.flatMap { it.allItems }
 
 
-fun LocalDate.toFhir() = DateType(this.year, this.monthValue, this.dayOfMonth)
+fun LocalDate.toFhir() = DateType(this.year, this.monthValue - 1, this.dayOfMonth)
+
+fun DateTimeType.toLocalDateTime() =
+    LocalDateTime.of(year, month + 1, day, hour, minute, second, millis * 1000000)!!
 
 fun LocalDate.toUtilDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())

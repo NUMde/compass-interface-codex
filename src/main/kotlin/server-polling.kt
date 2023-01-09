@@ -131,7 +131,7 @@ private fun uploadBundleEntries(
     client: IGenericClient,
     parser: IParser,
 ) {
-    var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it
+    var newPatientReference: Reference? = null
     for (resource in bundle.entry.map { it.resource }) {
         if (resource !is Questionnaire && resource !is Device && resource !is Organization) {
             println("uploading $resource")
@@ -146,6 +146,7 @@ private fun uploadBundleEntries(
                             value = queueItem.SubjectId
                         })
                         val outcome = client.create().resource(resource)
+// In theory, one could skip FHIR Search for the Patient by using conditional create, but this seems to be not supported by the fhirbridge
 //                        .conditional().where(Patient.IDENTIFIER.exactly().systemAndIdentifier(COMPASS_SUBJECT_ID, queueItem.SubjectId))
                             .execute()
                         newPatientReference = Reference(outcome.id)

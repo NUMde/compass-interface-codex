@@ -1,5 +1,6 @@
 import ca.uhn.fhir.context.FhirContext
 import org.hl7.fhir.r4.model.*
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemOperator.*
 import java.io.File
 import java.util.*
 import kotlin.random.Random
@@ -29,31 +30,30 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
             val actualAnswer = answersMap[it.question]
             if (enabledWhenAnswer != null && actualAnswer != null) {
                 when (it.operator) {
-                    Questionnaire.QuestionnaireItemOperator.EXISTS -> TODO()
-                    Questionnaire.QuestionnaireItemOperator.EQUAL ->
-                        (actualAnswer.firstOrNull()?.valueCoding?.code
-                            ?: false) == (enabledWhenAnswer as Coding).code
-                    Questionnaire.QuestionnaireItemOperator.NOT_EQUAL ->
-                        (actualAnswer.firstOrNull()?.valueCoding?.code
-                            ?: false) != (enabledWhenAnswer as Coding).code
-                    Questionnaire.QuestionnaireItemOperator.GREATER_THAN -> TODO()
-                    Questionnaire.QuestionnaireItemOperator.LESS_THAN -> TODO()
-                    Questionnaire.QuestionnaireItemOperator.GREATER_OR_EQUAL -> TODO()
-                    Questionnaire.QuestionnaireItemOperator.LESS_OR_EQUAL -> TODO()
-                    Questionnaire.QuestionnaireItemOperator.NULL -> TODO()
+                    EXISTS -> TODO()
+                    EQUAL -> (actualAnswer.firstOrNull()?.valueCoding?.code
+                        ?: false) == (enabledWhenAnswer as Coding).code
+
+                    NOT_EQUAL -> (actualAnswer.firstOrNull()?.valueCoding?.code
+                        ?: false) != (enabledWhenAnswer as Coding).code
+
+                    GREATER_THAN -> TODO()
+                    LESS_THAN -> TODO()
+                    GREATER_OR_EQUAL -> TODO()
+                    LESS_OR_EQUAL -> TODO()
                     else -> TODO()
                 }
             } else true
         } else true
     }
-    if (true) {
+    if (true) { // (enabled) {
         return QRItem().apply {
             text = item.text
             linkId = item.linkId
             answer = listOf(
                 QRAnswer().apply {
                     value = when {
-                        item.answerOption.isNotEmpty() -> item.answerOption.shuffled().first().value
+                        item.answerOption.isNotEmpty() -> item.answerOption.random().value
                         item.type == Questionnaire.QuestionnaireItemType.DECIMAL -> DecimalType(Random.nextDouble())
                         item.type == Questionnaire.QuestionnaireItemType.STRING -> StringType("Foo")
                         item.type == Questionnaire.QuestionnaireItemType.TEXT -> StringType("Foo")

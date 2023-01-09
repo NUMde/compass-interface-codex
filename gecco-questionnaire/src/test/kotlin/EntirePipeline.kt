@@ -5,7 +5,10 @@ import org.hl7.fhir.r4.model.Questionnaire
 import java.io.FileReader
 import java.io.FileWriter
 
-
+/**
+ * Call the entire pipeline (generate Questionnaire -> fill Questionnaire -> transform QuestionnaireResponse)
+ * to spot runtime errors early.
+ */
 fun main() {
 //    val questionnaire = toQuestionnaire()
     val jsonParser = FhirContext.forR4().newJsonParser().setPrettyPrint(true)

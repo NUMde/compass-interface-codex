@@ -11,8 +11,10 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent as QItem
 
-data class Dummy(val logicalModel: LogicalModel)
 
+/**
+ * Convert the logical model into a FHIR Questionnaire
+ */
 fun main() {
     val ctx = FhirContext.forR4()
     val parser = ctx.newJsonParser().setPrettyPrint(true)
@@ -34,7 +36,7 @@ fun toQuestionnaire(): Questionnaire {
         })
 }
 
-
+data class Dummy(val logicalModel: LogicalModel)
 
 fun propertyToItem(
     property: KProperty<*>,
