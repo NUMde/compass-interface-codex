@@ -13,7 +13,7 @@ suspend fun main() {
         apiKey = "gKdKLYG2g0-Y1EllI0-W",
         publicKey = PemUtils.loadPublicKey(publicKeyFile),
         privateKey = PemUtils.loadPrivateKey(privateKeyFile),
-        cert = PemUtils.loadCert(certFile)
+        certificate = PemUtils.loadCertificate(certFile)
     )
     val queueItems = downloader.retrieveAllQueueItems()
     val downloadedUUIDs = mutableListOf<String>()

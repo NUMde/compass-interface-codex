@@ -27,8 +27,8 @@ fun GeccoPatient(
 
 	fun AgeExtension(ageInYears: BigDecimal, dateTimeOfDocumentation: DateTimeType) = Extension().apply {
 		url = "https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/age"
-		extension.add(Extension("dateTimeOfDocumentation", dateTimeOfDocumentation)) //TODO
-		extension.add(Extension("age", AgeInYears(ageInYears))) //TODO
+		extension.add(Extension("dateTimeOfDocumentation", dateTimeOfDocumentation))
+		extension.add(Extension("age", AgeInYears(ageInYears)))
 	}
 
 	return Patient().apply {
@@ -36,10 +36,10 @@ fun GeccoPatient(
 		setId(patientId)
 		identifier = listOf()
 		if (ageInYears != null) {
-			extension.add(AgeExtension(ageInYears, dateTimeOfDocumentation))
+			addExtension(AgeExtension(ageInYears, dateTimeOfDocumentation))
 		}
 		if (ethnicGroup != null) {
-			extension.add(EthnicGroupExtension(ethnicGroup))
+			addExtension(EthnicGroupExtension(ethnicGroup))
 		}
 	}
 
@@ -203,7 +203,7 @@ fun AnaChronicKidneyDisease(
 	category = listOf(CodeableConcept(snomed("394589003", "Nephrology (qualifier value)")))
 	subject = patientRef
 
-	code = if(chronicKidneyDisease !in listOf(ChronicKidneyDisease.ABSENT, ChronicKidneyDisease.UNKNOWN)) {
+	code = if (chronicKidneyDisease !in listOf(ChronicKidneyDisease.ABSENT, ChronicKidneyDisease.UNKNOWN)) {
 		chronicKidneyDisease.codeableConcept
 	} else {
 		ChronicKidneyDisease.CHRONIC_KIDNEY_DISEASE.codeableConcept
@@ -339,11 +339,7 @@ fun AnaDNR(patientRef: Reference, resuscitation: Resuscitation) = Consent().appl
 	dateTimeElement = unknownDateTime()
 	category = listOf(
 		CodeableConcept(
-			Coding(
-				"http://terminology.hl7.org/CodeSystem/consentcategorycodes",
-				"dnr",
-				"Do Not Resuscitate"
-			)
+			Coding("http://terminology.hl7.org/CodeSystem/consentcategorycodes", "dnr", "Do Not Resuscitate")
 		)
 	)
 	policy = listOf(Consent.ConsentPolicyComponent().apply {

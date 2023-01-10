@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.8.0"
     application
-    id("maven-publish")
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -55,7 +54,7 @@ tasks.withType<KotlinCompile> {
 }
 
 application {
-    mainClassName = (project.properties["mainClass"] ?: "MainKt") as String
+    mainClass.set((project.properties["mainClass"] ?: "MainKt") as String)
 }
 
 tasks.register<proguard.gradle.ProGuardTask>("minimizedJar") {
@@ -63,7 +62,7 @@ tasks.register<proguard.gradle.ProGuardTask>("minimizedJar") {
     verbose()
 
     injars("$buildDir/libs/compass-interface-codex-cli.jar") //TODO
-    outjars("$buildDir/libs/compass-interface-codex-cli.min2.jar")
+    outjars("$buildDir/libs/compass-interface-codex-cli.min.jar")
 
     val javaHome = System.getProperty("java.home")
     if (System.getProperty("java.version").startsWith("1.")) {

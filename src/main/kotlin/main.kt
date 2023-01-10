@@ -8,53 +8,40 @@ import com.xenomachina.argparser.default
 import org.hl7.fhir.r4.model.*
 import java.io.File
 import java.io.FileReader
-import java.io.OutputStreamWriter
-import java.nio.charset.StandardCharsets
 
 class MyArgs(parser: ArgParser) {
-    val serverUrl by parser.storing(
-        "--serverUrl",
-        help = "Compass backend server URL")
+    val serverUrl by parser.storing("--serverUrl", help = "Compass backend server URL")
+    val apiId by parser.storing("--apiId", help = "Compass backend server apiId")
+    val apiKey by parser.storing("--apiKey", help = "Compass backend server apiKey")
 
-    val apiId by parser.storing(
-        "--apiId",
-        help = "Compass backend server apiId")
-
-    val apiKey by parser.storing(
-        "--apiKey",
-        help = "Compass backend server apiKey")
-
-    val privateKey by parser.storing(
-        "--privateKey",
-        help = "Compass backend server private key file") { File(this) }
-
-    val publicKey by parser.storing(
-        "--publicKey",
-        help = "Compass backend server public key file"){ File(this) }
-
+    val privateKey by parser.storing("--privateKey", help = "Compass backend server private key file") { File(this) }
+    val publicKey by parser.storing("--publicKey", help = "Compass backend server public key file") { File(this) }
     val certificate by parser.storing(
         "--certificate",
-        help = "Compass backend server certificate key file"){ File(this) }
+        help = "Compass backend server certificate key file"
+    ) { File(this) }
 
-    val outputDirectory by parser.storing(
-        "--outDir",
-        help = "Output directory to write JSON files"){ File(this) }.default<File?>(null)
+    val outputDirectory by parser.storing("--outDir", help = "Output directory to write JSON files") { File(this) }
+        .default<File?>(null)
 
     val targetFhirRepository by parser.storing(
-         "--targetFhirRepository",
-        help = "Target FHIR Repository. Is required, even if you don't want to upload, as it will be used in the internal generated IDs")
-
+        "--targetFhirRepository",
+        help = "Target FHIR Repository. Is required, even if you don't want to upload, as it will be used in the internal generated IDs"
+    )
     val basicAuth by parser.storing(
         "--basicAuth",
-        help = "Credentials for target FHIR repository. Format: username:password").default<String?>(null)
+        help = "Credentials for target FHIR repository. Format: username:password"
+    ).default<String?>(null)
 
     val uploadBundle by parser.flagging(
         "--uploadBundle",
-        help = "append to upload GECCO profile bundle to /Bundle endpoint of target FHIR repository")
+        help = "append to upload GECCO profile bundle to /Bundle endpoint of target FHIR repository"
+    )
 
     val uploadBundleEntries by parser.flagging(
         "--uploadBundleEntries",
-        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository")
+        help = "append to upload resources of GECCO profile bundle to their corresponding endpoints of target FHIR repository"
+    )
 
     val uploadQuestionnaires by parser.flagging(
         "--uploadQuestionnaires",
@@ -79,11 +66,14 @@ class MyArgs(parser: ArgParser) {
 
 const val COMPASS_SUBJECT_ID = "https://num-compass.science/fhir/NamingSystem/CompassSubjectId"
 
+/**
+ * CLI (Command line interface) entry point
+ */
 suspend fun main(args: Array<String>) {
     val parsedArgs = try {
         ArgParser(args).parseInto(::MyArgs)
     } catch (e: SystemExitException) {
-        e.printAndExit("compass-interface-codex",System.getenv("COLUMNS")?.toInt() ?: 119)
+        e.printAndExit("compass-interface-codex", System.getenv("COLUMNS")?.toInt() ?: 119)
     }
 
     val ctx = FhirContext.forR4()
@@ -91,7 +81,11 @@ suspend fun main(args: Array<String>) {
     val fhirServerBase = parsedArgs.targetFhirRepository
     val client by lazy { // lazy => don't throw error if client is not used
         ctx.newRestfulGenericClient(fhirServerBase).apply {
-            parsedArgs.basicAuth?.let{ registerInterceptor(BasicAuthInterceptor(it.substringBeforeLast(":"), it.substringAfterLast(":"))) }
+            parsedArgs.basicAuth?.let {
+                registerInterceptor(
+                    BasicAuthInterceptor(it.substringBeforeLast(":"), it.substringAfterLast(":"))
+                )
+            }
         }
     }
 
@@ -99,17 +93,17 @@ suspend fun main(args: Array<String>) {
     val downloader = CompassDownloader(
         serverUrl = parsedArgs.serverUrl,
         apiID = parsedArgs.apiId,
-        apiKey =  parsedArgs.apiKey,
+        apiKey = parsedArgs.apiKey,
         publicKey = PemUtils.loadPublicKey(parsedArgs.publicKey),
         privateKey = PemUtils.loadPrivateKey(parsedArgs.privateKey),
-        cert = PemUtils.loadCert(parsedArgs.certificate)
+        certificate = PemUtils.loadCertificate(parsedArgs.certificate)
     )
 
     val cache = mutableMapOf<String, Questionnaire>()
 
-    fun findInFolder(folder:File, url: String, version: String): Questionnaire? {
+    fun findInFolder(folder: File, url: String, version: String): Questionnaire? {
         print(" from folder... ")
-        for (file in folder.listFiles()) {
+        for (file in folder.listFiles() ?: error("Cannot read Questionnaire files in folder '$folder'!")) {
             val questionnaire = parser.parseResource(FileReader(file)) as Questionnaire
             if (questionnaire.url == url && questionnaire.version == version) {
                 return questionnaire
@@ -117,17 +111,23 @@ suspend fun main(args: Array<String>) {
         }
         return null
     }
+
     suspend fun retrieveQuestionnaire(qr: QuestionnaireResponse): Questionnaire {
         val canonical = qr.questionnaire
         if (!cache.containsKey(canonical)) {
-            print("  Retrieving corresponding Questionnaire '${qr.questionnaire}'")
+            printAndFlush("  Retrieving corresponding Questionnaire '${qr.questionnaire}'")
             val url = canonical.substringBeforeLast("|")
             val version = canonical.substringAfterLast("|")
             if (parsedArgs.questionnairesFolder != null) {
-                cache[canonical] = findInFolder(parsedArgs.questionnairesFolder!!, url, version) ?: throw Exception("Cannot find Questionnaire '${qr.questionnaire}' in folder!")
+                cache[canonical] = findInFolder(parsedArgs.questionnairesFolder!!, url, version)
+                    ?: error("Cannot find Questionnaire '${qr.questionnaire}' in folder!")
             } else {
-                print(" from server... ")
-                val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(url, version, downloader.retrieveAccessToken())
+                printAndFlush(" from server... ")
+                val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(
+                    url,
+                    version,
+                    downloader.retrieveAccessToken()
+                )
                 val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
                 cache[canonical] = questionnaire
             }
@@ -135,8 +135,6 @@ suspend fun main(args: Array<String>) {
         }
         return cache[canonical]!!
     }
-
-
 
 
     val queueItems = downloader.retrieveAllQueueItems()
@@ -184,9 +182,14 @@ suspend fun main(args: Array<String>) {
 
             if (parsedArgs.outputDirectory != null) {
                 printAndFlush("  Writing to files... ")
-                parsedArgs.outputDirectory!!.mkdirs()
-                parser.encodeResourceToWriter(qr, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-qr.json").outputStream(),StandardCharsets.UTF_8))
-                parser.encodeResourceToWriter(bundle, OutputStreamWriter(File(parsedArgs.outputDirectory!!, "${queueItem.SubjectId}-${queueItem.UUID}-gecco-bundle.json").outputStream(), StandardCharsets.UTF_8))
+                val outDir = parsedArgs.outputDirectory!!
+                outDir.mkdirs()
+                parser.encodeResourceToWriter(
+                    qr, File(outDir, "${queueItem.SubjectId}-${queueItem.UUID}-qr.json").writer(),
+                )
+                parser.encodeResourceToWriter(
+                    bundle, File(outDir, "${queueItem.SubjectId}-${queueItem.UUID}-gecco-bundle.json").writer(),
+                )
                 println("SUCCESS")
             }
 
@@ -199,7 +202,7 @@ suspend fun main(args: Array<String>) {
             if (parsedArgs.uploadBundleEntries) {
                 println("  Uploading Bundle entries to FHIR repository... ")
                 uploadBundleEntries(bundle, queueItem, client, parser)
-                println("SUCCESS")
+                println("  SUCCESS")
             }
             println()
         } catch (e: Exception) {
@@ -220,6 +223,9 @@ suspend fun main(args: Array<String>) {
     }
 }
 
+/**
+ * Upload all Bundle entries individually with POST requests because fhirbridge does not support overall transaction
+ */
 private fun uploadBundleEntries(
     bundle: Bundle,
     queueItem: QueueItem,
@@ -243,7 +249,6 @@ private fun uploadBundleEntries(
                     ).execute()
                     print(" => " + outcome.id)
                     newPatientReference = Reference(outcome.id)
-
                 } else {
                     changePatientId(entry.resource, newPatientReference!!)
                     val outcome = client.create().resource(entry.resource).execute()
@@ -275,19 +280,7 @@ fun changePatientId(resource: Resource, newPatientId: Reference) {
 
 }
 
-
-fun wrapProgress(message: String, block: () -> Unit) {
-    printAndFlush("  $message...")
-    try {
-        block()
-    } catch (e: Exception) {
-        println("FAILED")
-        throw e
-    }
-    println("SUCCESS")
-}
-
-fun printAndFlush(message: String) {
+private fun printAndFlush(message: String) {
     print(message)
     System.out.flush()
 }

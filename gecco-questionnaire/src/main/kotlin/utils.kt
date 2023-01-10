@@ -35,3 +35,38 @@ fun DateTimeType.toLocalDateTime() =
     LocalDateTime.of(year, month + 1, day, hour, minute, second, millis * 1000000)!!
 
 fun LocalDate.toUtilDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
+
+/**
+ * Helper function that copies all the extensions from the Questionnaire's items to the QuestionnaireResponse's items
+ */
+fun addExtensions(response: QR, questionnaire: Questionnaire) {
+    for (qrItem in response.item) {
+        val qItem = questionnaire.item.find { it.linkId == qrItem.linkId }
+            ?: throw UnknownLinkIdException(qrItem.linkId)
+        addExtensions(qrItem, qItem)
+    }
+}
+
+fun addExtensions(qrItem: QRItem, qItem: QItem) {
+    for (answerComponent in qrItem.answer) {
+        for (itemComponent in answerComponent.item) {
+            val qItem = qItem.item.find { it.linkId == itemComponent.linkId }
+                ?: throw UnknownLinkIdException(itemComponent.linkId)
+            addExtensions(itemComponent, qItem)
+        }
+    }
+    for (itemComponent in qrItem.item) {
+        val qItem = qItem.item.find { it.linkId == itemComponent.linkId }
+            ?: throw UnknownLinkIdException(itemComponent.linkId)
+        addExtensions(itemComponent, qItem)
+    }
+
+    qrItem.extension = qItem.extension.map { it.copy() }
+
+}
+
+class UnknownLinkIdException(val linkId: String) : Exception() {
+    override val message: String
+        get() = "Encountered linkId '${linkId}' in QuestionnaireResponse, which does not exist in Questionnaire! " +
+                "Please make sure, that Questionnaire and QuestionnaireResponse are corresponding to each other!"
+}

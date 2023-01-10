@@ -1,8 +1,7 @@
-import ca.uhn.fhir.context.FhirContext
 import org.hl7.fhir.r4.model.Questionnaire
 import java.io.File
 suspend fun main() {
-    val parser = FhirContext.forR4().newJsonParser()
+//    val parser = FhirContext.forR4().newJsonParser()
     val folder =
         "C:\\Users\\oehmj\\IdeaProjects\\compass-interface-codex\\compass-download-kotlin\\src\\main\\resources"
     val downloader = CompassDownloader(
@@ -11,7 +10,7 @@ suspend fun main() {
         apiKey = "gKdKLYG2g0-Y1EllI0-W",
         publicKey = PemUtils.loadPublicKey(File(folder, "public_key.pem")),
         privateKey = PemUtils.loadPrivateKey(File(folder, "private_key.pem")),
-        cert = PemUtils.loadCert(File(folder, "cacert.pem"))
+        certificate = PemUtils.loadCertificate(File(folder, "cacert.pem"))
     )
 
     val q = Questionnaire().apply {

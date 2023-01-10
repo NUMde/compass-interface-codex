@@ -18,14 +18,13 @@ import org.bouncycastle.cms.jcajce.JceKeyTransEnvelopedRecipient
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipient
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import java.io.File
 import java.nio.charset.StandardCharsets
-import java.security.*
-import java.security.cert.CertificateFactory
+import java.security.PrivateKey
+import java.security.Security
+import java.security.Signature
+import java.security.SignatureException
 import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -35,44 +34,6 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/**
- * Utils for reading PEM (Privacy Enhanced Mail) Files
- */
-object PemUtils {
-    fun loadPrivateKey(privateKeyFile: File): PrivateKey = loadPrivateKey(privateKeyFile.readText())
-    fun loadPrivateKey(privateKeyFile: String): PrivateKey {
-        val privateKeyContent = privateKeyFile
-            .replace("\n", "")
-            .replace("\r", "")
-            .replace("-----BEGIN PRIVATE KEY-----", "")
-            .replace("-----END PRIVATE KEY-----", "")
-
-        val keySpecPKCS8 = PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyContent))
-        return KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
-    }
-
-    fun loadPublicKey(publicKeyFile: File): RSAPublicKey = loadPublicKey(publicKeyFile.readText())
-
-    fun loadPublicKey(publicKey: String): RSAPublicKey {
-        val publicKeyContent = publicKey.replace("\n", "").replace("\r", "")
-            .replace("-----BEGIN PUBLIC KEY-----", "")
-            .replace("-----END PUBLIC KEY-----", "")
-
-        val keySpecX509 = X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyContent))
-        return KeyFactory.getInstance("RSA").generatePublic(keySpecX509) as RSAPublicKey
-    }
-
-    fun loadCert(certFile: File): X509Certificate {
-        return CertificateFactory.getInstance("X.509").generateCertificate(certFile.inputStream()) as X509Certificate
-    }
-
-    fun loadCert(certFile: String): X509Certificate {
-        return CertificateFactory.getInstance("X.509")
-            .generateCertificate(certFile.byteInputStream()) as X509Certificate
-    }
-
-}
-
 
 class CompassDownloader(
     private var serverUrl: String,
@@ -80,7 +41,7 @@ class CompassDownloader(
     private val apiKey: String,
     private val privateKey: PrivateKey,
     private val publicKey: RSAPublicKey,
-    private val cert: X509Certificate,
+    private val certificate: X509Certificate,
 ) {
 
     private val log = KotlinLogging.logger {}
@@ -105,7 +66,7 @@ class CompassDownloader(
     }
 
 
-    class EncryptionResult(val cipherText: ByteArray, val key: SecretKey, val iv: ByteArray)
+    private class EncryptionResult(val cipherText: ByteArray, val key: SecretKey, val iv: ByteArray)
 
 
     private fun aesEncrypt(plaintext: ByteArray): EncryptionResult {
@@ -262,7 +223,7 @@ class CompassDownloader(
 
 
     fun encryptPkcs7CMS(data: ByteArray?): ByteArray? {
-        val jceKey = JceKeyTransRecipientInfoGenerator(this.cert)
+        val jceKey = JceKeyTransRecipientInfoGenerator(this.certificate)
 
         val cmsEnvelopedDataGenerator = CMSEnvelopedDataGenerator()
         cmsEnvelopedDataGenerator.addRecipientInfoGenerator(jceKey)
@@ -273,7 +234,7 @@ class CompassDownloader(
         return cmsEnvelopedDataGenerator.generate(msg, encryptor).encoded
     }
 
-    fun decryptPkcs7CMS(encryptedData: ByteArray): ByteArray {
+    private fun decryptPkcs7CMS(encryptedData: ByteArray): ByteArray {
         val envelopedData = CMSEnvelopedData(encryptedData)
         val recipients = envelopedData.recipientInfos.recipients
         val recipientInfo = recipients.iterator().next() as KeyTransRecipientInformation

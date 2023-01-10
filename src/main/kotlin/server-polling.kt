@@ -29,6 +29,12 @@ data class PollingArgs(
 
 private val log = KotlinLogging.logger {}
 
+/**
+ * This is the entry point for the Docker container. It polls the compass-numapp-backend on a regular interval
+ * for new participants responses, transforms them and sends them to the fhir-bridge.
+ *
+ * Parameters must be set via the system environment variables
+ */
 suspend fun main() {
     val args = PollingArgs()
 
@@ -47,7 +53,7 @@ suspend fun main() {
         apiKey = args.apiKey,
         publicKey = PemUtils.loadPublicKey(args.publicKey),
         privateKey = PemUtils.loadPrivateKey(args.privateKey),
-        cert = PemUtils.loadCert(args.certificate)
+        certificate = PemUtils.loadCertificate(args.certificate)
     )
 
     val questionnaireCache = mutableMapOf<String, Questionnaire>()
@@ -78,7 +84,7 @@ private suspend fun pollingAction(
             val questionnaireJson = downloader.retrieveQuestionnaireStringByUrlAndVersion(
                 url, version, downloader.retrieveAccessToken()
             )
-            println("questionnaireJson = " + questionnaireJson)
+            log.debug { "questionnaireJson = $questionnaireJson" }
             val questionnaire = parser.parseResource(questionnaireJson) as Questionnaire
             cache[canonical] = questionnaire
             log.info { "Retrieving Questionnaire '${qr.questionnaire}' successful" }

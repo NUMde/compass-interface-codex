@@ -2,7 +2,6 @@ import org.hl7.fhir.r4.model.CodeableConcept
 import org.hl7.fhir.r4.model.Coding
 import org.hl7.fhir.r4.model.Procedure
 import org.hl7.fhir.r4.model.codesystems.ConditionClinical
-import java.util.*
 
 interface CodeableEnum<T : Enum<T>> {
 	val coding: Coding
@@ -959,8 +958,8 @@ enum class Symptom(override val codeableConcept: CodeableConcept): ConceptEnum<S
 
 }
 
-val therapeuticProcedure = CodeableConcept(snomed("277132007", "Therapeutic procedure (procedure)"))
-val positioningAndSupport =
+private val therapeuticProcedure = CodeableConcept(snomed("277132007", "Therapeutic procedure (procedure)"))
+private val positioningAndSupport =
 	CodeableConcept(snomed("225287004", "Procedures relating to positioning and support (procedure)"))
 
 enum class Therapies(val codeableConcept: CodeableConcept, val profile: String, val category: CodeableConcept) {
@@ -986,14 +985,7 @@ enum class Therapies(val codeableConcept: CodeableConcept, val profile: String, 
 	}, "https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/prone-position", positioningAndSupport);
 }
 
-class YesNoUnknownWithSymptomSeverity(
-	var yesNoUnknown: YesNoUnknown? = null,
-	var severity: SymptomSeverity? = null
-)
-class YesNoUnknownWithDate(
-	var yesNoUnknown: YesNoUnknown? = null,
-	var date: Date? = null
-)
+
 
 enum class YesNoUnknownOtherNa(override val coding: Coding): CodeableEnum<YesNoUnknownOtherNa> {
 	YES(snomed("373066001", "Yes (qualifier value)")),
@@ -1003,12 +995,21 @@ enum class YesNoUnknownOtherNa(override val coding: Coding): CodeableEnum<YesNoU
 	NA(snomed("385432009", "Not applicable (qualifier value)"))
 }
 
-enum class VentilationTypes(val status: Procedure.ProcedureStatus,val code: Coding, val used: Coding? = null, override val coding: Coding): CodeableEnum<VentilationTypes> {
+enum class VentilationTypes(
+	val status: Procedure.ProcedureStatus,
+	val code: Coding,
+	val used: Coding? = null,
+	override val coding: Coding
+) : CodeableEnum<VentilationTypes> {
 	NASAL_HIGH_FLOW_OXYGEN(
 		Procedure.ProcedureStatus.INPROGRESS,
 		snomed("371907003", "Oxygen administration by nasal cannula (procedure)"),
 		snomed("426854004", "High flow oxygen nasal cannula (physical object)"),
-		Coding("https://num-compass.science/fhir/CodeSystem/VentilationTypes", "NASAL_HIGH_FLOW_OXYGEN", "Nasal High-Flow-Oxygen-Therapy")
+		Coding(
+			"https://num-compass.science/fhir/CodeSystem/VentilationTypes",
+			"NASAL_HIGH_FLOW_OXYGEN",
+			"Nasal High-Flow-Oxygen-Therapy"
+		)
 	),
 	NON_INVASIVE_VENTILATION(
 		Procedure.ProcedureStatus.INPROGRESS,
@@ -1043,6 +1044,10 @@ enum class VentilationTypes(val status: Procedure.ProcedureStatus,val code: Codi
 	),
 }
 
+/**
+ * A NUM-specific CodeSystem is introduced because e.g. Cormitary and Moderna have the same SNOMED-code,
+ * making resulting FHIR Questionnaire answers indistinguishable
+ */
 enum class Covid19Vaccine(override val coding: Coding, val snomed: Coding):CodeableEnum<Covid19Vaccine> {
 	COMIRNATY(
 		Coding("https://num-compass.science/fhir/CodeSystem/Covid19Vaccine", "COMIRNATY", "Comirnaty® BioNTech/Pfizer"),
@@ -1300,8 +1305,7 @@ enum class AntiCoagulant(val code: Coding) {
 	MELAGATRAN(atc("B01AE04", "Melagatran")),
 	XIMELAGATRAN(atc("B01AE05", "Ximelagatran")),
 	BIVALIRUDIN(atc("B01AE06", "Bivalirudin")),
-	DABIGATRANETEXILAT(atc("B01AE07", "Dabigatranetexilat")),
-
+	DABIGATRANETEXILAT(atc("B01AE07", "Dabigatranetexilat"));
 }
 
 enum class FederalStates(override val coding: Coding): CodeableEnum<FederalStates>{
@@ -1320,7 +1324,7 @@ enum class FederalStates(override val coding: Coding): CodeableEnum<FederalState
 	SACHSEN(iso3155DE("DE-SN", "Sachsen")),
 	SACHSEN_ANHALT(iso3155DE("DE-ST", "Sachsen-Anhalt")),
 	SCHLESWIG_HOLSTEIN(iso3155DE("DE-SH", "Schleswig-Holstein")),
-	THUERINGEN(iso3155DE("DE-TH", "Thüringen"))
+	THUERINGEN(iso3155DE("DE-TH", "Thüringen"));
 }
 
 enum class Countries(override val coding: Coding): CodeableEnum<Countries>{
@@ -1573,5 +1577,5 @@ enum class Countries(override val coding: Coding): CodeableEnum<Countries>{
 	MAYOTTE(iso3166_1_2("YT", "Mayotte")),
 	SOUTH_AFRICA(iso3166_1_2("ZA", "South Africa")),
 	ZAMBIA(iso3166_1_2("ZM", "Zambia")),
-	ZIMBABWE(iso3166_1_2("ZW", "Zimbabwe")),
+	ZIMBABWE(iso3166_1_2("ZW", "Zimbabwe"));
 }
