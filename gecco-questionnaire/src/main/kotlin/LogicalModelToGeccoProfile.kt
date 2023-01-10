@@ -18,7 +18,7 @@ fun main() {
 
     val fileContent = LogicalModel::class.java.getResource("/generated-response.json").readText()
     val qr = parser.parseResource(fileContent) as QuestionnaireResponse
-    addExtensions(qr, toQuestionnaire())
+    addExtensions(qr, LogicalModel.toQuestionnaire())
     val logicalModel = toLogicalModel(questionnaire, qr)
     println(logicalModel.toString())
     val q =
@@ -145,8 +145,8 @@ fun logicalModelToGeccoProfile(
         }
 
         if (logicalModel.anamnesis.hasDiabetesMellitus != null) {
-            if(logicalModel.anamnesis.hasDiabetesMellitus!! == YesNoUnknown.YES){
-                if(logicalModel.anamnesis.diabetesMellitus != null){
+            if (logicalModel.anamnesis.hasDiabetesMellitus!! == YesNoUnknown.YES) {
+                if (logicalModel.anamnesis.diabetesMellitus != null) {
                     when (logicalModel.anamnesis.diabetesMellitus) {
                         Diabetes.TYPE1 -> {
                             add(AnaDiabetes(patientRef, Diabetes.TYPE1, YesNoUnknown.YES, recordedDate))

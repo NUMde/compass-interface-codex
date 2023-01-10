@@ -35,6 +35,8 @@ annotation class ComboBox
 @Target(AnnotationTarget.PROPERTY)
 annotation class Ignore
 
+// The rest of individual annotations are defined because annotations must be tied to a known enum type at compile time
+
 @Target(AnnotationTarget.PROPERTY)
 annotation class SymptomEnum(val enum: Symptom)
 

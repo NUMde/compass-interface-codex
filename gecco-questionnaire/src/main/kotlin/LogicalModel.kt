@@ -30,7 +30,9 @@ data class LogicalModel(
     var therapy: Therapy = Therapy(),
     @Text("Vitalparameter")
     var vitalSigns: VitalSigns = VitalSigns()
-)
+) {
+    companion object // Create empty Companion object for extension fun LogicalModel.Companion.toQuestionnaire()
+}
 
 
 data class Anamnesis(

@@ -1,6 +1,7 @@
 import ca.uhn.fhir.context.FhirContext
 import org.hl7.fhir.r4.model.*
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemOperator.*
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType.*
 import java.io.File
 import java.util.*
 import kotlin.random.Random
@@ -54,11 +55,11 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
                 QRAnswer().apply {
                     value = when {
                         item.answerOption.isNotEmpty() -> item.answerOption.random().value
-                        item.type == Questionnaire.QuestionnaireItemType.DECIMAL -> DecimalType(Random.nextDouble())
-                        item.type == Questionnaire.QuestionnaireItemType.STRING -> StringType("Foo")
-                        item.type == Questionnaire.QuestionnaireItemType.TEXT -> StringType("Foo")
-                        item.type == Questionnaire.QuestionnaireItemType.DATE -> DateType(Date())
-                        item.type == Questionnaire.QuestionnaireItemType.INTEGER -> IntegerType(Random.nextInt())
+                        item.type == DECIMAL -> DecimalType(Random.nextDouble())
+                        item.type == STRING -> StringType("Foo")
+                        item.type == TEXT -> StringType("Foo")
+                        item.type == DATE -> DateType(Date())
+                        item.type == INTEGER -> IntegerType(Random.nextInt())
                         else -> null
                     }
                 }

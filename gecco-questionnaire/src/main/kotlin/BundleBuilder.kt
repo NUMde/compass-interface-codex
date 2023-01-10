@@ -49,7 +49,7 @@ class ValidationServerBundleBuilder(author: Organization, app: Device, originalQ
     init {
         bundle.type = Bundle.BundleType.DOCUMENT
         bundle.timestampElement = InstantType.now()
-        bundle.identifier = Identifier().apply {
+        bundle.identifier.apply {
             system = "https://github.com/NUMde/"
             value = "dummy-identifier"
         }
