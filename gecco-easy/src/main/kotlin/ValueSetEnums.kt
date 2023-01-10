@@ -12,14 +12,6 @@ interface ConceptEnum<T : Enum<T>> {
 	val codeableConcept: CodeableConcept
 }
 
-inline fun <reified T> getByCoding(coding: Coding): T? where T : CodeableEnum<T>, T : Enum<T> {
-	return enumValues<T>().find { it.coding.system == coding.system && it.coding.code == coding.code }
-}
-
-inline fun <reified T> getByCoding2(coding: Coding): T? where T : ConceptEnum<T>, T : Enum<T> {
-	return enumValues<T>().find { it.codeableConcept.coding.any { it.system == coding.system && it.code == coding.code } }
-}
-
 enum class YesNoUnknown(override val coding: Coding) : CodeableEnum<YesNoUnknown> {
 	YES(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "Y", "Ja")),
 	NO(Coding("http://terminology.hl7.org/CodeSystem/v2-0136", "N", "Nein")),
@@ -139,7 +131,7 @@ enum class RheumatologicalImmunologicalDiseases(val codeableConcept: CodeableCon
 	VASCULITIS(CodeableConcept(snomed("31996006", "Vasculitis (disorder)"))),
 	CONGENITAL_IMMUNODEFICIENCY_DISEASE(
 		CodeableConcept(snomed("36138009", "Congenital immunodeficiency disease (disorder)"))
-	),
+	);
 }
 
 enum class ChronicNeurologicalMentalDisease(val codeableConcept: CodeableConcept) {
@@ -165,7 +157,7 @@ enum class ChronicNeurologicalMentalDisease(val codeableConcept: CodeableConcept
 		CodeableConcept(
 			snomed("429993008", "History of cerebrovascular accident without residual deficits (situation)")
 		)
-	),
+	);
 }
 
 enum class ChronicKidneyDisease(override val codeableConcept: CodeableConcept, val displayDe: String): ConceptEnum<ChronicKidneyDisease> {
@@ -217,7 +209,7 @@ enum class Imaging(val codeableConcept: CodeableConcept) {
 			dicom("US", "Ultrasound")
 		)
 		text = "Ultrasound"
-	})
+	});
 }
 
 
@@ -263,7 +255,7 @@ enum class FrailityScore(override val codeableConcept: CodeableConcept) : Concep
 	MODERATELY_FRAIL(CodeableConcept(frailty_score("6", "Moderately Frail"))),
 	SEVERELY_FRAIL(CodeableConcept(frailty_score("7", "Severely Frail"))),
 	VERY_SEVERELY_FRAIL(CodeableConcept(frailty_score("8", "Very Severely Frail"))),
-	TERMINALLY_ILL(CodeableConcept(frailty_score("9", "Terminally Ill"))),
+	TERMINALLY_ILL(CodeableConcept(frailty_score("9", "Terminally Ill")));
 }
 
 
@@ -272,14 +264,14 @@ enum class FrailityScore(override val codeableConcept: CodeableConcept) : Concep
  */
 enum class ObservationCategory(val codeableConcept: CodeableConcept) {
 	VITAL_SIGNS(CodeableConcept(org.hl7.fhir.r4.model.codesystems.ObservationCategory.VITALSIGNS.toCoding())),
-	LAB(CodeableConcept().apply {
-		coding = listOf(
+	LAB(
+		CodeableConcept(
 			loinc("26436-6", "Laboratory studies (set)"),
 			org.hl7.fhir.r4.model.codesystems.ObservationCategory.LABORATORY.toCoding()
 		)
-	}),
+	),
 	SOCIAL_HISTORY(CodeableConcept(org.hl7.fhir.r4.model.codesystems.ObservationCategory.SOCIALHISTORY.toCoding())),
-	SURVEY(CodeableConcept(org.hl7.fhir.r4.model.codesystems.ObservationCategory.SURVEY.toCoding()))
+	SURVEY(CodeableConcept(org.hl7.fhir.r4.model.codesystems.ObservationCategory.SURVEY.toCoding()));
 
 }
 
@@ -301,37 +293,33 @@ enum class PregnancyStatus(override val codeableConcept: CodeableConcept): Conce
 			loinc("LA4489-6", "Unknown"),
 			snomed("261665006", "Unknown (qualifier value)")
 		)
-	})
+	});
 }
 
 
 enum class KnownExposureVS(val codeableConcept: CodeableConcept) {
 	YES(CodeableConcept(snomed("840546002", "Exposure to severe acute respiratory syndrome coronavirus 2 (event)"))),
-	NO(CodeableConcept(snomed("373067005", "No (qualifier value)")))
+	NO(CodeableConcept(snomed("373067005", "No (qualifier value)")));
 }
 
 enum class SmokingStatus(override val codeableConcept: CodeableConcept): ConceptEnum<SmokingStatus> {
 	SMOKER(CodeableConcept(loinc("LA18976-3", "Current every day smoker"))),
 	FORMER_SMOKER(CodeableConcept(loinc("LA15920-4", "Former smoker"))),
 	NEVER(CodeableConcept(loinc("LA18978-9", "Never smoker"))),
-	UNKNOWN(CodeableConcept(loinc("LA18980-5", "Unknown if ever smoked")))
+	UNKNOWN(CodeableConcept(loinc("LA18980-5", "Unknown if ever smoked")));
 }
 
 
 enum class ConditionVerificationStatus(val codeableConcept: CodeableConcept) {
 	VERIFIED(CodeableConcept().apply {
 		coding = listOf(
-			org.hl7.fhir.r4.model.codesystems.ConditionVerStatus.CONFIRMED.let {
-				Coding(it.system, it.toCode(), it.display)
-			},
+			org.hl7.fhir.r4.model.codesystems.ConditionVerStatus.CONFIRMED.toCoding(),
 			Coding("http://snomed.info/sct", "410605003", "Confirmed present (qualifier value)")
 		)
 	}),
 	REFUTED(CodeableConcept().apply {
 		coding = listOf(
-			org.hl7.fhir.r4.model.codesystems.ConditionVerStatus.REFUTED.let {
-				Coding(it.system, it.toCode(), it.display)
-			},
+			org.hl7.fhir.r4.model.codesystems.ConditionVerStatus.REFUTED.toCoding(),
 			snomed("410594000", "Definitely NOT present (qualifier value)")
 		)
 	})
@@ -353,7 +341,7 @@ enum class ComplicationsCovid19(val codeableConcept: CodeableConcept) {
 				"Pre-renal acute kidney injury (disorder)"
 			)
 		)
-	),
+	);
 	//TODO: Add also ICD10 codes?
 }
 
@@ -393,7 +381,7 @@ enum class StageAtDiagnosis(override val codeableConcept: CodeableConcept): Conc
 	UNKNOWN(CodeableConcept().apply {
 		coding = listOf(snomed("261665006", "Unknown (qualifier value)"))
 		text = "Unknown"
-	})
+	});
 }
 
 class LabCodes {
@@ -803,8 +791,8 @@ enum class OrgansForTransplant(val snomed: Coding, val icd10: Coding?) {
 	CEREBRAL_MENINGES_STRUCTURE(snomed("8935007", "Cerebral meninges structure (body structure)"), null),
 	BONE_TISSUE_STRUCTURE(snomed("3138006", "Bone (tissue) structure (body structure)"), null),
 	CARTILAGE_TISSUE(snomed("309312004", "Cartilage tissue (body structure)"), null),
-	TENDON_STRUCTURE(snomed("13024002", "Tendon structure (body structure)"), null),
-	//TODO: Add and map remaning icd10-codes
+	TENDON_STRUCTURE(snomed("13024002", "Tendon structure (body structure)"), null);
+	//TODO: Add and map remaining icd10-codes
 }
 
 enum class Symptom(override val codeableConcept: CodeableConcept): ConceptEnum<Symptom> {
@@ -967,7 +955,7 @@ enum class Symptom(override val codeableConcept: CodeableConcept): ConceptEnum<S
 	CLOUDED_CONSCIOUSNESS(CodeableConcept().apply {
 		coding = listOf(snomed("40917007", "Clouded consciousness (finding)"))
 		text = "Bewusstseinstrübung"
-	})
+	});
 
 }
 
@@ -995,7 +983,7 @@ enum class Therapies(val codeableConcept: CodeableConcept, val profile: String, 
 	PRONE_POSITION(CodeableConcept().apply {
 		coding = listOf(snomed("431182000", "Placing subject in prone position (procedure)"))
 		text = "Prone position"
-	}, "https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/prone-position", positioningAndSupport),
+	}, "https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/prone-position", positioningAndSupport);
 }
 
 class YesNoUnknownWithSymptomSeverity(
@@ -1107,11 +1095,7 @@ enum class ConditionClinicalStatus(val enum: ConditionClinical) {
 
 	val codeableConcept: CodeableConcept
 		get() = CodeableConcept(
-			Coding(
-				"http://terminology.hl7.org/CodeSystem/condition-clinical",
-				enum.toCode(),
-				enum.display
-			)
+			Coding("http://terminology.hl7.org/CodeSystem/condition-clinical", enum.toCode(), enum.display)
 		)
 }
 
@@ -1158,13 +1142,13 @@ enum class ImmunizationDisease(val targetDisease: CodeableConcept?, val vaccineC
 			)
 		)
 	), //TODO ?!
-	OTHER(null, null) //TODO?!
+	OTHER(null, null); //TODO?!
 }
 
 enum class Resuscitation(override val coding: Coding, val displayDe: String): CodeableEnum<Resuscitation> {
 	YES(snomed("304252001", "For resuscitation (finding)"), "Wiederbeleben"),
 	NO(snomed("304253006", "Not for resuscitation (finding)"), "Nicht wiederbeleben"),
-	UNKNOWN(snomed("261665006", "Unknown (qualifier value)"), "Unbekannt")
+	UNKNOWN(snomed("261665006", "Unknown (qualifier value)"), "Unbekannt");
 }
 
 enum class MedicationCovid19(val snomed: Coding? = null, val num: Coding? = null) {
@@ -1224,22 +1208,13 @@ enum class MedicationCovid19(val snomed: Coding? = null, val num: Coding? = null
 	TOCILIZUMAB(snomed = snomed("444649004", "Product containing tocilizumab (medicinal product)")),
 	SARILUMAB(snomed = snomed("763522001", "Product containing sarilumab (medicinal product)")),
 	CALCINEURIN_INHIBITOR(
-		snomed = snomed(
-			"416587008",
-			"Product containing calcineurin inhibitor (product)"
-		)
+		snomed = snomed("416587008", "Product containing calcineurin inhibitor (product)")
 	), //TODO gleich CNI, aber was ist mit mTor?
 	TUMOR_NECROSIS_FACTOR_ALPHA_INHIBITOR(
-		snomed = snomed(
-			"416897008",
-			"Product containing tumor necrosis factor alpha inhibitor (product)"
-		)
+		snomed = snomed("416897008", "Product containing tumor necrosis factor alpha inhibitor (product)")
 	),
 	INTERLEUKIN_1_RECEPTOR_ANTAGONIST(
-		snomed = snomed(
-			"430817009",
-			"Product containing interleukin 1 receptor antagonist (product)"
-		)
+		snomed = snomed("430817009", "Product containing interleukin 1 receptor antagonist (product)")
 	),
 	RUXOLITINIB(snomed = snomed("703779004", "Product containing ruxolitinib (medicinal product)")),
 	COLCHICINE(snomed = snomed("73133000", "Product containing colchicine (medicinal product)")),
@@ -1308,10 +1283,7 @@ enum class AntiCoagulant(val code: Coding) {
 	CLOPIDOGREL_UND_ACETYLSALICYLSAEURE(atc("B01AC34", "Clopidogrel und Acetylsalicylsäure")),
 	DIPYRIDAMOL_UND_ACETYLSALICYLSAEURE(atc("B01AC36", "Dipyridamol und Acetylsalicylsäure")),
 	ACETYLSALICYLSAEURE_KOMBINATIONEN_MIT_PROTONENPUMPENHEMMERN(
-		atc(
-			"B01AC56",
-			"Acetylsalicylsäure, Kombinationen mit Protonenpumpenhemmern"
-		)
+		atc("B01AC56", "Acetylsalicylsäure, Kombinationen mit Protonenpumpenhemmern")
 	),
 	ACETYLSALICYLSAEURE_UND_ESOMEPRAZOL(atc("B01AC86", "Acetylsalicylsäure und Esomeprazol")),
 	PHENPROCOUMON(atc("B01AA04", "Phenprocoumon")),
