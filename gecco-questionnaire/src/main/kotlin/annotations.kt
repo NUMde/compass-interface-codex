@@ -1,8 +1,39 @@
+/**
+ * Set the 'GeccoTargetProfile' extension value of the generated Questionnaire item.
+ * Is inherited to child items
+ */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
 annotation class FhirProfile(val url: String)
 
+/**
+ * Sets the item.text value of the generated Questionnaire item
+ */
 @Target(AnnotationTarget.PROPERTY)
 annotation class Text(val text: String)
+
+/**
+ * Add enableWhen-Condition to item, value must be 'Yes' of the 'YesNoUnkown' value set
+ */
+@Target(AnnotationTarget.PROPERTY)
+annotation class EnableWhenYes(val geccoId: String)
+
+/**
+ * Add enableWhen-Condition to item
+ */
+@Target(AnnotationTarget.PROPERTY)
+annotation class EnableWhen(val geccoId: String, val system: String, val code: String)
+
+/**
+ * Add item control drop-down extension to generated questionnaire item (for long lists of answerOptions)
+ */
+@Target(AnnotationTarget.PROPERTY)
+annotation class ComboBox
+
+/**
+ * Do not output element in generated questionnaire
+ */
+@Target(AnnotationTarget.PROPERTY)
+annotation class Ignore
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class SymptomEnum(val enum: Symptom)
@@ -90,18 +121,6 @@ annotation class LabINR(val enum: LabCodes.INR)
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class Quantity(val enum: LabCodes.INR)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class EnableWhenYes(val geccoId: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class EnableWhen(val geccoId: String, val system: String, val code: String)
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class ComboBox()
-
-@Target(AnnotationTarget.PROPERTY)
-annotation class Ignore()
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class ChronicLungDiseaseEnum(val enum: ChronicLungDisease)

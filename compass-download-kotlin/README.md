@@ -3,7 +3,8 @@ This is a clone of [compass-numapp-downloader](https://github.com/NUMde/compass-
 instead of Python. This is why the interface component does not depend on a Python installation.
 
 ## IMPORTANT HINT
-You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than 
+You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versions cannot use AES with
+more than
 128 Bit due to legal reasons.
 
 ## Example usage

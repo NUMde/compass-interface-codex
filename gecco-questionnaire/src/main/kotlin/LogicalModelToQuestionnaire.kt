@@ -55,14 +55,14 @@ fun propertyToItem(
 
     property.findAnnotation<EnableWhenYes>()?.let {
         item.enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
-            question = it.geccoId // in a later step, run thru entire questionnaire and replace with linkId
+            question = it.geccoId // in a later step, run through entire questionnaire and replace with linkId
             operator = Questionnaire.QuestionnaireItemOperator.EQUAL
             answer = YesNoUnknown.YES.coding
         })
     }
     property.findAnnotation<EnableWhen>()?.let {
         item.enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
-            question = it.geccoId //in a later step, run thru entire questionnaire and replace with linkId
+            question = it.geccoId //in a later step, run through entire questionnaire and replace with linkId
             operator = Questionnaire.QuestionnaireItemOperator.EQUAL
             answer = Coding(it.system, it.code, null)
         })

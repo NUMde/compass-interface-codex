@@ -328,7 +328,11 @@ data class Demographics(
     @Text("Biologisches Geschlecht")
     var biologicalSex: BirthSex? = null,
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/pregnancy-status")
-    @Text("Liegt eine Schwangerschaft vor?") @EnableWhen("demographics.biologicalSex", "http://hl7.org/fhir/administrative-gender", "female")
+    @Text("Liegt eine Schwangerschaft vor?") @EnableWhen(
+        "demographics.biologicalSex",
+        "http://hl7.org/fhir/administrative-gender",
+        "female"
+    )
     var pregnancyStatus: PregnancyStatus? = null,
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/ethnic-group")
     @Text("ethnische Zugehörigkeit")
@@ -338,10 +342,10 @@ data class Demographics(
     var dateOfBirth: LocalDate? = null,
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/Patient")
     @Text("Alter bei Studieneinschluss in Jahren")
-    var ageInYears: Int? = null, //TODO Berechne die anderen Werte von dem einen
+    var ageInYears: Int? = null,
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/Patient")
     @Text("Alter bei Studieneinschluss in Monaten")
-    var ageInMonth: Int? = null, //TODO
+    var ageInMonth: Int? = null,
     @FhirProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/frailty-score")
     @Text("Frailty-Score vor Aufnahme")
     var frailityScore: FrailityScore? = null,
