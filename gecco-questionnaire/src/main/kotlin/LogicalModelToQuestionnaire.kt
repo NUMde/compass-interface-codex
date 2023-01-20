@@ -52,6 +52,9 @@ fun propertyToItem(
     }
 
     val fhirProfileUrl = property.findAnnotation<FhirProfile>()?.url ?: fhirProfileUrl2
+    if (fhirProfileUrl != "") {
+        item.addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
+    }
 
     property.findAnnotation<EnableWhenYes>()?.let {
         item.enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
@@ -76,6 +79,7 @@ fun propertyToItem(
     if (returnType.isData) {
         item.apply {
             type = Questionnaire.QuestionnaireItemType.GROUP
+            item.removeExtension("https://num-compass.science/fhir/StructureDefinition/GeccoTargetProfile")
             val constructorPropertiesMap = returnType.memberProperties.associateBy { it.name }
 
             var i = 0
@@ -96,103 +100,15 @@ fun propertyToItem(
 
         }
     } else if (returnType == YesNoUnknown::class) {
-        item.apply {
-            //Add the parameter FhirProfile as definitionElement
-            if (fhirProfileUrl != "") {
-                addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
-            }
-            type = Questionnaire.QuestionnaireItemType.CHOICE
-            extractEnum(YesNoUnknown::class.java)
-        }
+        YesNoUnknownRenderer().render(compassId, item)
     } else if (returnType == YesNoUnknownWithSymptomSeverity::class) {
-        item.apply {
-            if (fhirProfileUrl != "") {
-                addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
-            }
-            type = Questionnaire.QuestionnaireItemType.GROUP
-            val presence = QItem().apply {
-                linkId = item.linkId + ".1"
-                text = "Vorhandensein?"
-                type = Questionnaire.QuestionnaireItemType.CHOICE
-                extractEnum(YesNoUnknown::class.java)
-                addExtension(CompassGeccoItemExtension("$compassId.presence"))
-            }
-            this.addItem(presence)
-
-            val severity = QItem().apply {
-                linkId = item.linkId + ".2"
-                text = "Schweregrad?"
-                type = Questionnaire.QuestionnaireItemType.CHOICE
-                extractEnum(SymptomSeverity::class.java)
-                enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
-                    question = "${compassId.removePrefix(".")}.presence"
-                    operator = Questionnaire.QuestionnaireItemOperator.EQUAL
-                    answer = YesNoUnknown.YES.coding
-                })
-                addExtension(CompassGeccoItemExtension("$compassId.severity"))
-                addExtension(DependentItemExtension())
-            }
-            item.addItem(severity)
-        }
+        YesNoUnknownWithSeverityRenderer().render(compassId, item)
     } else if (returnType == YesNoUnknownWithIntent::class) {
-        item.apply {
-            if (fhirProfileUrl != "") {
-                addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
-            }
-            type = Questionnaire.QuestionnaireItemType.GROUP
-            this.item = listOf(QItem().apply {
-                linkId = item.linkId + ".1"
-                text = "Wurde das Medikament verabreicht?"
-                type = Questionnaire.QuestionnaireItemType.CHOICE
-                extractEnum(YesNoUnknown::class.java)
-                addExtension(CompassGeccoItemExtension("$compassId.given"))
-            }, QItem().apply {
-                linkId = item.linkId + ".2"
-                text = "Mit welcher therapheutischen Absicht das Medikament verarbreicht?"
-                type = Questionnaire.QuestionnaireItemType.CHOICE
-                extractEnum(TherapeuticIntent::class.java)
-                enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
-                    question = "${compassId.removePrefix(".")}.given"
-                    operator = Questionnaire.QuestionnaireItemOperator.EQUAL
-                    answer = YesNoUnknown.YES.coding
-                })
-                addExtension(CompassGeccoItemExtension("$compassId.intent"))
-                addExtension(DependentItemExtension())
-            }
-            )
-        }
+        YesNoUnknownWithIntentRenderer().render(compassId, item)
     } else if (returnType == YesNoUnknownWithDate::class) {
-        item.apply {
-            if (fhirProfileUrl != "") {
-                addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
-            }
-
-            type = Questionnaire.QuestionnaireItemType.GROUP
-            this.item = listOf(QItem().apply {
-                linkId = item.linkId + ".1"
-                extractEnum(YesNoUnknown::class.java)
-                addExtension(CompassGeccoItemExtension("$compassId.status"))
-            }, QItem().apply {
-                linkId = item.linkId + ".2"
-                text = "Datum"
-                type = Questionnaire.QuestionnaireItemType.DATE
-                enableWhen = listOf(Questionnaire.QuestionnaireItemEnableWhenComponent().apply {
-                    question = "${compassId.removePrefix(".")}.status"
-                    operator = Questionnaire.QuestionnaireItemOperator.EQUAL
-                    answer = YesNoUnknown.YES.coding
-                })
-                addExtension(CompassGeccoItemExtension("$compassId.date"))
-                addExtension(DependentItemExtension())
-            })
-
-        }
+        YesNoUnknownWithDateRenderer().render(compassId, item)
     } else if (returnType.isSubclassOf(Enum::class)) {
         item.apply {
-            //Find the annotation on the class and add the FhirProfile as definitionElement
-            if (fhirProfileUrl != "") {
-                addExtension(GeccoTargetProfileExtension(fhirProfileUrl))
-            }
-
             extractEnum(property.returnType.jvmErasure.java)
         }
     } else if (returnType == Float::class) {
@@ -293,19 +209,19 @@ fun extractUnitFromLabAnnotation(property: KProperty<*>): GeccoUnits? {
     return null
 }
 
-private fun Questionnaire.QuestionnaireItemComponent.extractEnum(clazz: Class<out Any>) {
+fun Questionnaire.QuestionnaireItemComponent.extractEnum(clazz: Class<out Any>) {
     val enums = clazz.enumConstants
     type = Questionnaire.QuestionnaireItemType.CHOICE
     answerOption = enums.map {
         val coding = it::class.declaredMemberProperties.find { it.name == "coding" }?.getter
         val codeableConcept = it::class.declaredMemberProperties.find { it.name == "codeableConcept" }
-        val displayTextDe = it::class.declaredMemberProperties.find { it.name == "displayDe" }
         val result = when {
             coding != null -> coding.call(it) as Coding
-            codeableConcept != null ->
-                (codeableConcept.call(it) as CodeableConcept).coding.first() //TODO: What if there are multiple codings?
+            // If there are multiple codings, one must ensure that the codings are unique
+            codeableConcept != null -> (codeableConcept.call(it) as CodeableConcept).coding.first()
             else -> Coding(null, null, it.toString())
         }
+        val displayTextDe = it::class.declaredMemberProperties.find { it.name == "displayDe" }
         if (displayTextDe != null) {
             val displayTextDeValue = displayTextDe.call(it) as String?
             if (displayTextDeValue != null) {
@@ -339,7 +255,7 @@ fun replaceGeccoIDWithLinkID(qItems: List<QItem>, mapByExtension: Map<String, QI
 }
 
 
-private fun qItemByGeccoId(questionnaire: Questionnaire): Map<String, QItem> {
+fun qItemByGeccoId(questionnaire: Questionnaire): Map<String, QItem> {
     return questionnaire.allItems.associateBy { (it.getExtensionByUrl("https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem").value as Coding).code }
 }
 
@@ -348,7 +264,7 @@ private fun DropDownExtension() = Extension(
     CodeableConcept(Coding("http://hl7.org/fhir/questionnaire-item-control", "drop-down", "Drop down"))
 )
 
-private fun CompassGeccoItemExtension(compassId: String) = Extension(
+fun CompassGeccoItemExtension(compassId: String) = Extension(
     COMPASS_GECCO_ITEM_EXTENSION,
     Coding(COMPASS_GECCO_ITEM_CS, compassId.removePrefix("."), null).setVersion("1.0")
 )
@@ -362,7 +278,7 @@ private fun GeccoTargetProfileExtension(profile: String) =
 /**
  * This extension suppresses the ability to add a single item to the new Questionnaire by compass-questionniare-editor
  */
-private fun DependentItemExtension() =
+fun DependentItemExtension() =
     Extension("https://num-compass.science/fhir/StructureDefinition/DependentItem", BooleanType(true))
 
 private fun QuestionnaireUnitExtension(coding: Coding) =
