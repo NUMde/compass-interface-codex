@@ -107,7 +107,7 @@ private suspend fun pollingAction(
 
             val questionnaire = retrieveQuestionnaire(qr)
 
-            addExtensions(qr, questionnaire)
+            copyExtensions(qr, questionnaire)
 
             val logicalModel = toLogicalModel(questionnaire, qr)
             val bundleBuilder = TransactionBundleBuilder()

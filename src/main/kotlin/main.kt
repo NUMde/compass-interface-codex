@@ -153,7 +153,7 @@ suspend fun main(args: Array<String>) {
             val questionnaire = retrieveQuestionnaire(qr)
 
             printAndFlush("  Adding extensions from Questionnaire to QuestionnaireResponse...")
-            addExtensions(qr, questionnaire)
+            copyExtensions(qr, questionnaire)
             println("SUCCESS")
 
             if (parsedArgs.uploadQuestionnaireResponses) {

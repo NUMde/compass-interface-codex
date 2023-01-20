@@ -1,7 +1,9 @@
+import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.hl7.fhir.r4.model.DateTimeType
 import org.hl7.fhir.r4.model.DateType
 import org.hl7.fhir.r4.model.Questionnaire
 import org.hl7.fhir.r4.model.QuestionnaireResponse
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -39,26 +41,26 @@ fun LocalDate.toUtilDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefa
 /**
  * Helper function that copies all the extensions from the Questionnaire's items to the QuestionnaireResponse's items
  */
-fun addExtensions(response: QR, questionnaire: Questionnaire) {
+fun copyExtensions(response: QR, questionnaire: Questionnaire) {
     for (qrItem in response.item) {
         val qItem = questionnaire.item.find { it.linkId == qrItem.linkId }
             ?: throw UnknownLinkIdException(qrItem.linkId)
-        addExtensions(qrItem, qItem)
+        copyExtensions(qrItem, qItem)
     }
 }
 
-fun addExtensions(qrItem: QRItem, qItem: QItem) {
+private fun copyExtensions(qrItem: QRItem, qItem: QItem) {
     for (answerComponent in qrItem.answer) {
         for (itemComponent in answerComponent.item) {
             val qItem = qItem.item.find { it.linkId == itemComponent.linkId }
                 ?: throw UnknownLinkIdException(itemComponent.linkId)
-            addExtensions(itemComponent, qItem)
+            copyExtensions(itemComponent, qItem)
         }
     }
     for (itemComponent in qrItem.item) {
         val qItem = qItem.item.find { it.linkId == itemComponent.linkId }
             ?: throw UnknownLinkIdException(itemComponent.linkId)
-        addExtensions(itemComponent, qItem)
+        copyExtensions(itemComponent, qItem)
     }
 
     qrItem.extension = qItem.extension.map { it.copy() }
@@ -69,4 +71,16 @@ class UnknownLinkIdException(val linkId: String) : Exception() {
     override val message: String
         get() = "Encountered linkId '${linkId}' in QuestionnaireResponse, which does not exist in Questionnaire! " +
                 "Please make sure, that Questionnaire and QuestionnaireResponse are corresponding to each other!"
+}
+
+fun TemporalPrecisionEnum.toSimpleDateFormat(): SimpleDateFormat? {
+    return when (this) {
+        TemporalPrecisionEnum.YEAR -> "yyyy"
+        TemporalPrecisionEnum.MONTH -> "yyyy-MM"
+        TemporalPrecisionEnum.DAY -> "yyyy-MM-dd"
+        TemporalPrecisionEnum.MINUTE -> "yyyy-MM-dd'T'HH:mm"
+        TemporalPrecisionEnum.SECOND -> "yyyy-MM-dd'T'HH:mm:ss"
+        TemporalPrecisionEnum.MILLI -> "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
+        else -> null
+    }?.let { SimpleDateFormat(it) }
 }

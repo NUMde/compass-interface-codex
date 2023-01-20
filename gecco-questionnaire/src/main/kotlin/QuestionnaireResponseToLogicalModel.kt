@@ -1,8 +1,6 @@
 import ca.uhn.fhir.context.FhirContext
-import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.hl7.fhir.r4.model.*
 import java.io.FileReader
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.*
@@ -26,9 +24,9 @@ fun main() {
 }
 
 fun toLogicalModel(questionnaire: Questionnaire, qr: QuestionnaireResponse): LogicalModel {
-    addExtensions(qr, questionnaire)
-    val mapped = qItemByGeccoId(qr).filter { it.value.value != null } as HashMap
-    val processedMap = processMappedCodes(mapped)
+    copyExtensions(qr, questionnaire)
+    val qrAnswerByGeccoId = qrAnswerByGeccoId(qr).filter { it.value?.value != null } as Map<String, QRAnswer>
+    val processedMap = processMappedCodes(qrAnswerByGeccoId)
 
     val logicalModel = LogicalModel()
 
@@ -37,6 +35,11 @@ fun toLogicalModel(questionnaire: Questionnaire, qr: QuestionnaireResponse): Log
     }
 
     return logicalModel
+}
+
+fun qrAnswerByGeccoId(qr: QuestionnaireResponse): Map<String, QRAnswer?> {
+    return qr.allItems.groupBy { (it.getExtensionByUrl(COMPASS_GECCO_ITEM_EXTENSION)?.value as Coding).code }
+        .mapValues { it.value.firstOrNull()?.answer?.firstOrNull() }
 }
 
 fun toYesNoUnknown(value: Type?): YesNoUnknown? {
@@ -94,7 +97,7 @@ fun toYesNoUnknownOtherNa(value: Type?): YesNoUnknownOtherNa? {
 
 fun toDate(value: Type?): Date? {
     if (value is DateType) {
-        val format = getSimpleDateFormatterForPrecision(value.precision)
+        val format = value.precision.toSimpleDateFormat()
         return format?.parse(value.valueAsString)
     }
 
@@ -103,46 +106,17 @@ fun toDate(value: Type?): Date? {
 
 fun toLocalDate(value: Type): LocalDate? {
     if (value is DateType) {
-        val format = getSimpleDateFormatterForPrecision(value.precision)
+        val format = value.precision.toSimpleDateFormat()
         return format?.parse(value.valueAsString)?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
     }
 
     return null
 }
 
-fun getSimpleDateFormatterForPrecision(precision: TemporalPrecisionEnum): SimpleDateFormat? {
-    return when (precision.name) {
-        "YEAR" -> SimpleDateFormat("yyyy")
-        "MONTH" -> SimpleDateFormat("yyyy-MM")
-        "DAY" -> SimpleDateFormat("yyyy-MM-dd")
-        "MINUTE" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm")
-        "SECOND" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-        "MILLISECOND" -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-        else -> null
-    }
-}
 
-fun toFloat(value: Type): Float? {
-    if (value is DecimalType) {
-        return value.value.toFloat()
-    }
-    return null
-}
-
-fun toInt(value: Type?): Int? {
-    if (value is IntegerType) {
-        return value.value.toInt()
-    }
-    return null
-}
-
-fun toStringValue(value: Type): String? {
-    if (value is StringType) {
-        return value.valueAsString
-    }
-
-    return null
-}
+fun toFloat(value: Type) = (value as? DecimalType)?.value?.toFloat()
+fun toInt(value: Type?) = (value as? IntegerType)?.value?.toInt()
+fun toStringValue(value: Type) = (value as? StringType)?.valueAsString
 
 
 fun setValueForCode(
@@ -181,11 +155,9 @@ fun setValueForCode(
 }
 
 fun Any.getPropertyThroughReflection(propertyName: String): Any? {
-    return try {
+    return kotlin.runCatching {
         this::class.members.find { it.name == propertyName }
-    } catch (e: NoSuchMethodException) {
-        null
-    }
+    }.getOrNull()
 }
 
 inline fun <reified T : Any> Any.getInstanceThroughReflection(propertyName: String): T? {
@@ -206,26 +178,25 @@ fun Any.setPropertyThroughReflection(propertyName: String, value: Any) {
     }
 }
 
-data class ProcessingHolder(var map: HashMap<String, QRAnswer>, var result: HashMap<String, Any>)
+class ProcessingHolder(var map: MutableMap<String, QRAnswer>, var result: MutableMap<String, Any>) {
+    fun addResultAndFilterCodes(resultsToAdd: Map<String, Any>, subCodes: Map<String, Map<String, QRAnswer>>? = null) {
+        this.result.putAll(resultsToAdd)
+        this.map = this.map.filter { !this.result.containsKey(it.key) }.toMutableMap()
 
-fun ProcessingHolder.addResultAndFilterCodes(
-    resultsToAdd: Map<String, Any>,
-    subCodes: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>? = null
-) {
-    this.result.putAll(resultsToAdd)
-    this.map = this.map.filter { !this.result.containsKey(it.key) } as HashMap<String, QRAnswer>
-
-    if (subCodes != null) {
-        for (entry in subCodes.entries) {
-            for (subCode in entry.value)
-                this.map.remove(subCode.key)
+        if (subCodes != null) {
+            for (entry in subCodes.entries) {
+                for (subCode in entry.value) {
+                    this.map.remove(subCode.key)
+                }
+            }
         }
-    }
 
+    }
 }
 
-fun processMappedCodes(map: HashMap<String, QRAnswer>): HashMap<String, Any> {
-    val processingHolder = ProcessingHolder(map, HashMap())
+
+fun processMappedCodes(map: Map<String, QRAnswer>): Map<String, Any> {
+    val processingHolder = ProcessingHolder(map.toMutableMap(), HashMap())
     //Order somewhat important as logic used to find codes overlaps
 
     val specialTypes = getSpecialTypeToCodeAndAnswer(processingHolder.map)
@@ -259,7 +230,9 @@ fun processMappedCodes(map: HashMap<String, QRAnswer>): HashMap<String, Any> {
     )
 
     val valueCodes = findValueCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(createValuesFromCodes(valueCodes), valueCodes)
+    processingHolder.addResultAndFilterCodes(
+        createValuesFromCodes(valueCodes),
+        valueCodes.mapValues { mapOf(it.key to it.value) })
 
     return processingHolder.result
 }
@@ -268,20 +241,15 @@ data class SpecialEnumTypeToCodeAndAnswer(val clazz: KClass<*>?, val code: Strin
 
 fun getSpecialTypesFromLogicalModelWithPath(subProperties: Any, path: String = ""): Map<String, KClass<*>> {
     val map = HashMap<String, KClass<*>>()
-    var newPath: String
-    subProperties.javaClass.kotlin.memberProperties.forEach {
-        val propertyValue = it.get(subProperties)
+    for (property in subProperties.javaClass.kotlin.memberProperties) {
+        val propertyValue = property.get(subProperties)
 
-        newPath = if (path.isNotEmpty()) {
-            "$path.${it.name}"
-        } else {
-            it.name
-        }
+        val newPath = if (path.isNotEmpty()) "$path.${property.name}" else property.name
 
         if (propertyValue?.javaClass?.kotlin?.memberProperties?.isNotEmpty() == true) {
             map.putAll(getSpecialTypesFromLogicalModelWithPath(propertyValue, newPath))
         } else {
-            when (it.returnType.toString()) {
+            when (property.returnType.toString()) {
                 "YesNoUnknown?" -> {}
                 "YesNoUnknownWithIntent?" -> {}
                 "YesNoUnknownOtherNa?" -> {}
@@ -294,7 +262,7 @@ fun getSpecialTypesFromLogicalModelWithPath(subProperties: Any, path: String = "
                 "kotlin.String?" -> {}
                 //Only for classes that cannot be inferred by logic
                 else -> {
-                    map[newPath] = it.returnType.classifier as KClass<*>
+                    map[newPath] = property.returnType.classifier as KClass<*>
                 }
             }
         }
@@ -302,109 +270,62 @@ fun getSpecialTypesFromLogicalModelWithPath(subProperties: Any, path: String = "
     return map
 }
 
-fun getSpecialTypeToCodeAndAnswer(map: HashMap<String, QRAnswer>): List<SpecialEnumTypeToCodeAndAnswer> {
-    val result = mutableListOf<SpecialEnumTypeToCodeAndAnswer>()
+fun getSpecialTypeToCodeAndAnswer(map: Map<String, QRAnswer>): List<SpecialEnumTypeToCodeAndAnswer> {
     val codesToFind = getSpecialTypesFromLogicalModelWithPath(LogicalModel())
 
-    map.filter {
-        codesToFind.containsKey(it.key)
-    }.forEach {
-        result.add(SpecialEnumTypeToCodeAndAnswer(codesToFind[it.key], it.key, it.value))
-    }
-    return result
+    return map.entries
+        .filter { codesToFind.containsKey(it.key) }
+        .map { (key, value) -> SpecialEnumTypeToCodeAndAnswer(codesToFind[key], key, value) }
 }
 
 fun createSpecialTypeForCodeAndAnswer(list: List<SpecialEnumTypeToCodeAndAnswer>): Map<String, Any> {
     val result = HashMap<String, Any>()
     for (entry in list) {
         try {
-            when (entry.clazz) {
-                typeOf<ChronicKidneyDisease>().classifier -> {
-                    result[entry.code] = getByCoding2<ChronicKidneyDisease>(entry.answer.valueCoding)!!
-                }
+            val coding = entry.answer.valueCoding
+            result[entry.code] = when (entry.clazz) {
+                typeOf<ChronicKidneyDisease>().classifier -> getByCoding2<ChronicKidneyDisease>(coding)!!
+                typeOf<Diabetes>().classifier -> getByCoding2<Diabetes>(coding)!!
+                typeOf<Countries>().classifier -> getByCoding<Countries>(coding)!!
+                typeOf<FederalStates>().classifier -> getByCoding<FederalStates>(coding)!!
+                typeOf<CancerStatus>().classifier -> getByCoding<CancerStatus>(coding)!!
+                typeOf<Resuscitation>().classifier -> getByCoding<Resuscitation>(coding)!!
+                typeOf<SmokingStatus>().classifier -> getByCoding2<SmokingStatus>(coding)!!
+                typeOf<BirthSex>().classifier -> getByCoding<BirthSex>(coding)!!
+                typeOf<EthnicGroup>().classifier -> getByCoding<EthnicGroup>(coding)!!
+                typeOf<FrailityScore>().classifier -> getByCoding2<FrailityScore>(coding)!!
+                typeOf<PregnancyStatus>().classifier -> getByCoding2<PregnancyStatus>(coding)!!
+                typeOf<RadiologicFindings>().classifier -> getByCoding2<RadiologicFindings>(coding)!!
+                typeOf<ACEInhibitorAdministration>().classifier -> getByCoding<ACEInhibitorAdministration>(coding)!!
+                typeOf<StageAtDiagnosis>().classifier -> getByCoding2<StageAtDiagnosis>(coding)!!
+                typeOf<DetectedNotDetectedInconclusive>().classifier ->
+                    getByCoding2<DetectedNotDetectedInconclusive>(coding)!!
 
-                typeOf<Diabetes>().classifier -> {
-                    result[entry.code] = getByCoding2<Diabetes>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<Countries>().classifier -> {
-                    result[entry.code] = getByCoding<Countries>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<FederalStates>().classifier -> {
-                    result[entry.code] = getByCoding<FederalStates>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<CancerStatus>().classifier -> {
-                    result[entry.code] = getByCoding<CancerStatus>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<Resuscitation>().classifier -> {
-                    result[entry.code] = getByCoding<Resuscitation>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<SmokingStatus>().classifier -> {
-                    result[entry.code] = getByCoding2<SmokingStatus>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<BirthSex>().classifier -> {
-                    result[entry.code] = getByCoding<BirthSex>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<EthnicGroup>().classifier -> {
-                    result[entry.code] = getByCoding<EthnicGroup>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<FrailityScore>().classifier -> {
-                    result[entry.code] = getByCoding2<FrailityScore>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<PregnancyStatus>().classifier -> {
-                    result[entry.code] = getByCoding2<PregnancyStatus>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<RadiologicFindings>().classifier -> {
-                    result[entry.code] = getByCoding2<RadiologicFindings>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<ACEInhibitorAdministration>().classifier -> {
-                    result[entry.code] = getByCoding<ACEInhibitorAdministration>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<StageAtDiagnosis>().classifier -> {
-                    result[entry.code] = getByCoding2<StageAtDiagnosis>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<DetectedNotDetectedInconclusive>().classifier -> {
-                    result[entry.code] = getByCoding2<DetectedNotDetectedInconclusive>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<TypeOfDischarge>().classifier -> {
-                    result[entry.code] = getByCoding2<TypeOfDischarge>(entry.answer.valueCoding)!!
-                }
-
-                typeOf<VentilationTypes>().classifier -> {
-                    result[entry.code] = getByCoding<VentilationTypes>(entry.answer.valueCoding)!!
-                }
+                typeOf<TypeOfDischarge>().classifier -> getByCoding2<TypeOfDischarge>(coding)!!
+                typeOf<VentilationTypes>().classifier -> getByCoding<VentilationTypes>(coding)!!
+                else -> {}
             }
         } catch (e: Exception) {
-            println("Could not fetch correct Enum type. QuestionnaireResponse is probably faulty.")
+            println("Could not fetch correct Enum type. QuestionnaireResponse is probably faulty. $e")
         }
     }
 
     return result
 }
 
-fun findCovid19VaccinationCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findCovid19VaccinationCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.key.substringAfterLast(".").contains("date") ||
                 it.key.substringAfterLast(".").contains("status") ||
                 it.key.substringAfterLast(".").contains("vaccine")
     }.groupBy { it.key.substringBeforeLast(".") }
+        .mapValues { it.value.toMap() }
         .filter { it.value.size > 2 }
 }
 
-fun createCovid19VaccinationFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+private fun <K, V> List<Map.Entry<K, V>>.toMap() = this.associate { it.toPair() }
+
+fun createCovid19VaccinationFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
     val result = mutableMapOf<String, Any>()
     for (code in map) {
         val coding = Covid19Vaccination()
@@ -422,15 +343,15 @@ fun createCovid19VaccinationFromCodes(map: Map<String, List<MutableMap.MutableEn
     return result
 }
 
-fun findYesNoUnknownWithDateCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findYesNoUnknownWithDateCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.key.substringAfterLast(".").contains("date") ||
                 it.key.substringAfterLast(".").contains("status")
     }.groupBy { it.key.substringBeforeLast(".") }
-        .filter { it.value.size > 1 }
+        .filter { it.value.size > 1 }.mapValues { it.value.toMap() }
 }
 
-fun createYesNoUnknownWithDateFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+fun createYesNoUnknownWithDateFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
     val result = mutableMapOf<String, Any>()
     for (code in map) {
         val coding = YesNoUnknownWithDate()
@@ -447,15 +368,16 @@ fun createYesNoUnknownWithDateFromCodes(map: Map<String, List<MutableMap.Mutable
 }
 
 
-fun findYesNoUnknownWithSymptomSeverityCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findYesNoUnknownWithSymptomSeverityCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.key.substringAfterLast(".").contains("presence") ||
                 it.key.substringAfterLast(".").contains("severity")
     }.groupBy { it.key.substringBeforeLast(".") }
         .filter { it.value.size > 1 }
+        .mapValues { it.value.toMap() }
 }
 
-fun createYesNoUnknownWithSymptomSeverityFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): HashMap<String, Any> {
+fun createYesNoUnknownWithSymptomSeverityFromCodes(map: Map<String, Map<String, QRAnswer>>): HashMap<String, Any> {
     val result = HashMap<String, Any>()
     for (code in map) {
         val coding = YesNoUnknownWithSymptomSeverity()
@@ -471,19 +393,18 @@ fun createYesNoUnknownWithSymptomSeverityFromCodes(map: Map<String, List<Mutable
     return result
 }
 
-fun findYesNoUnknownCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findYesNoUnknownCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.value.value is Coding &&
-                (
-                        (it.value.value as Coding).code == YesNoUnknown.YES.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknown.NO.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknown.UNKNOWN.coding.code
-                        )
+                (it.value.valueCoding.code == YesNoUnknown.YES.coding.code
+                        || it.value.valueCoding.code == YesNoUnknown.NO.coding.code
+                        || it.value.valueCoding.code == YesNoUnknown.UNKNOWN.coding.code)
     }.groupBy { it.key }
+        .mapValues { it.value.toMap() }
 }
 
-fun createYesNoUnknownFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
-    val result = HashMap<String, Any>()
+fun createYesNoUnknownFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
+    val result = mutableMapOf<String, Any>()
     for (code in map) {
         // Should always have one entry, but to be consistent in syntax
         for (subcode in code.value) {
@@ -493,21 +414,19 @@ fun createYesNoUnknownFromCodes(map: Map<String, List<MutableMap.MutableEntry<St
     return result
 }
 
-fun findYesNoUnknownOtherNaCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findYesNoUnknownOtherNaCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.value.value is Coding &&
-                (
-                        (it.value.value as Coding).code == YesNoUnknownOtherNa.YES.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknownOtherNa.NO.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknownOtherNa.UNKNOWN.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknownOtherNa.OTHER.coding.code ||
-                                (it.value.value as Coding).code == YesNoUnknownOtherNa.NA.coding.code
-                        )
-    }.groupBy { it.key }
+                (it.value.valueCoding.code == YesNoUnknownOtherNa.YES.coding.code
+                        || it.value.valueCoding.code == YesNoUnknownOtherNa.NO.coding.code
+                        || it.value.valueCoding.code == YesNoUnknownOtherNa.UNKNOWN.coding.code
+                        || it.value.valueCoding.code == YesNoUnknownOtherNa.OTHER.coding.code
+                        || it.value.valueCoding.code == YesNoUnknownOtherNa.NA.coding.code)
+    }.groupBy { it.key }.mapValues { it.value.toMap() }
 }
 
-fun createYesNoUnknownOtherNaFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
-    val result = HashMap<String, Any>()
+fun createYesNoUnknownOtherNaFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
+    val result = HashMap<String, YesNoUnknownOtherNa>()
     for (code in map) {
         // Should always have one entry, but to be consistent in syntax
         for (subcode in code.value) {
@@ -517,52 +436,48 @@ fun createYesNoUnknownOtherNaFromCodes(map: Map<String, List<MutableMap.MutableE
     return result
 }
 
-fun findYesNoUnknownWithIntentCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
+fun findYesNoUnknownWithIntentCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
     return map.entries.filter {
         it.key.substringAfterLast(".").contains("intent") ||
                 it.key.substringAfterLast(".").contains("administration")
     }.groupBy { it.key.substringBeforeLast(".") }
         .filter { it.value.size > 1 }
+        .mapValues { it.value.toMap() }
 }
 
-fun createYesNoUnknownWithIntentFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+fun createYesNoUnknownWithIntentFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
     val result = HashMap<String, Any>()
-    for (code in map) {
+    for ((geccoId, answers) in map) {
         val coding = YesNoUnknownWithIntent()
-        for (subcode in code.value) {
+        for (subcode in answers) {
             if (subcode.key.contains("intent")) {
                 coding.intent = getByCoding2<TherapeuticIntent>(subcode.value.valueCoding)
             } else if (subcode.key.contains("administration")) {
                 coding.administration = toYesNoUnknown(subcode.value.valueCoding)
             }
         }
-        result[code.key] = coding
+        result[geccoId] = coding
     }
     return result
 }
 
-fun findValueCodes(map: HashMap<String, QRAnswer>): Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>> {
-    return map.entries.filter {
-        it.value.value is IntegerType ||
-                it.value.value is DecimalType ||
-                it.value.value is StringType ||
-                it.value.value is DateType
-    }.groupBy { it.key }
+fun findValueCodes(map: Map<String, QRAnswer>): Map<String, QRAnswer> {
+    return map.filterValues {
+        it.value is IntegerType || it.value is DecimalType || it.value is StringType || it.value is DateType
+    }
 }
 
-fun createValuesFromCodes(map: Map<String, List<MutableMap.MutableEntry<String, QRAnswer>>>): Map<String, Any> {
+fun createValuesFromCodes(map: Map<String, QRAnswer>): Map<String, Any> {
     val result = HashMap<String, Any>()
-    for (code in map) {
-        for (subcode in code.value) {
-            val value = when (subcode.value.value::class) {
-                StringType::class -> toStringValue(subcode.value.value)
-                DateType::class -> toLocalDate(subcode.value.value)
-                IntegerType::class -> toInt(subcode.value.value)
-                DecimalType::class -> toFloat(subcode.value.value)
-                else -> null
-            }
-            result[code.key] = value!!
+    for ((geccoId, answer) in map) {
+        val value = when (answer.value::class) {
+            StringType::class -> toStringValue(answer.value)
+            DateType::class -> toLocalDate(answer.value)
+            IntegerType::class -> toInt(answer.value)
+            DecimalType::class -> toFloat(answer.value)
+            else -> null
         }
+        result[geccoId] = value!!
     }
     return result
 }
@@ -595,7 +510,7 @@ fun extractLab(mapByExtension: HashMap<String, QRAnswer>): LaboratoryValuesLabor
     return result
 }
 
-
+/*
 fun qItemByGeccoId(response: QR, hashMap: HashMap<String, QRAnswer> = HashMap()): HashMap<String, QRAnswer> {
     response.item.forEach { itemComponent -> itemComponent.answer?.forEach { qItemByGeccoId(it, hashMap) } }
     response.item.forEach { qItemByGeccoId(it, hashMap) }
@@ -631,3 +546,4 @@ fun qItemByGeccoId(
     }
     return hashMap
 }
+*/

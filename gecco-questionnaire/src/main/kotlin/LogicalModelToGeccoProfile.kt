@@ -18,7 +18,7 @@ fun main() {
 
     val fileContent = LogicalModel::class.java.getResource("/generated-response.json").readText()
     val qr = parser.parseResource(fileContent) as QuestionnaireResponse
-    addExtensions(qr, LogicalModel.toQuestionnaire())
+    copyExtensions(qr, LogicalModel.toQuestionnaire())
     val logicalModel = toLogicalModel(questionnaire, qr)
     println(logicalModel.toString())
     val q =
@@ -42,19 +42,19 @@ fun logicalModelToGeccoProfile(
 ): Bundle {
     val patientRef = Reference(patientId)
     return bundleBuilder.apply {
-        val now = LocalDate.now()
-        val ageInYears = logicalModel.demographics.ageInYears ?: logicalModel.demographics.ageInMonth?.floorDiv(12) ?: logicalModel.demographics.dateOfBirth?.let{ JodaPeriod.between(it, now).years }
+        val ageInYears = logicalModel.demographics.ageInYears
+            ?: logicalModel.demographics.ageInMonth?.floorDiv(12)
+            ?: logicalModel.demographics.dateOfBirth?.let {
+                JodaPeriod.between(it, recordedDate.toLocalDateTime().toLocalDate()).years
+            }
 
-        val patient = GeccoPatient(patientId, logicalModel.demographics.ethnicGroup, ageInYears?.toBigDecimal(), recordedDate)
+        val patient =
+            GeccoPatient(patientId, logicalModel.demographics.ethnicGroup, ageInYears?.toBigDecimal(), recordedDate)
 
-        if (ageInYears != null && logicalModel.demographics.dateOfBirth == null) {
-            patient.birthDateElement = logicalModel.demographics.dateOfBirth?.toFhir()
-                ?: logicalModel.demographics.ageInMonth?.let {
-                    DateType(recordedDate.toLocalDateTime().minusMonths(it.toLong()).toString().substring(0, 7))
-                } ?: DateType((recordedDate.year - ageInYears).toString())
-        } else if (logicalModel.demographics.dateOfBirth != null) {
-            patient.birthDateElement = logicalModel.demographics.dateOfBirth!!.toFhir()
-        }
+        patient.birthDateElement = logicalModel.demographics.dateOfBirth?.toFhir()
+            ?: logicalModel.demographics.ageInMonth?.let {
+                DateType(recordedDate.toLocalDateTime().minusMonths(it.toLong()).toString().substring(0, 7))
+            } ?: ageInYears?.let { DateType((recordedDate.year - it).toString()) }
 
         add(patient)
 
@@ -139,7 +139,7 @@ fun logicalModelToGeccoProfile(
                 }
             } else if (logicalModel.anamnesis.hasHistoryOfBeingATissueOrOrganRecipient!! == YesNoUnknown.UNKNOWN) {
                 for (organ in OrgansForTransplant.values()) {
-                    add(AnaTransplant(patientRef, YesNoUnknown.NO, recordedDate, organ))
+                    add(AnaTransplant(patientRef, YesNoUnknown.UNKNOWN, recordedDate, organ))
                 }
             }
         }
@@ -180,9 +180,16 @@ fun logicalModelToGeccoProfile(
                     }
 
                 }
-            } else  if (logicalModel.anamnesis.hasDiabetesMellitus!! != YesNoUnknown.YES) {
+            } else if (logicalModel.anamnesis.hasDiabetesMellitus!! != YesNoUnknown.YES) {
                 for (diabetesType in Diabetes.values()) {
-                    add(AnaDiabetes(patientRef, diabetesType, logicalModel.anamnesis.hasDiabetesMellitus!!, recordedDate))
+                    add(
+                        AnaDiabetes(
+                            patientRef,
+                            diabetesType,
+                            logicalModel.anamnesis.hasDiabetesMellitus!!,
+                            recordedDate
+                        )
+                    )
                 }
             }
         }
@@ -311,8 +318,6 @@ fun logicalModelToGeccoProfile(
         if (logicalModel.demographics.pregnancyStatus != null) {
             add(PregnancyStatus(patientRef, logicalModel.demographics.pregnancyStatus!!, unknownDateTime()))
         }
-
-
         if (logicalModel.demographics.frailityScore != null) {
             add(FrailtyScore(patientRef, logicalModel.demographics.frailityScore!!))
         }
@@ -330,23 +335,46 @@ fun logicalModelToGeccoProfile(
                 tc.pulmonaryEmbolism?.let {
                     add(Complications(patientRef, ComplicationsCovid19.PULMONARY_EMBOLISM, it, recordedDate))
                 }
-                tc.cerebrovascularAccident?.let {add(
-                    Complications(patientRef, ComplicationsCovid19.CEREBROVASCULAR_ACCIDENT, it, recordedDate)
-                )}
+                tc.cerebrovascularAccident?.let {
+                    add(
+                        Complications(patientRef, ComplicationsCovid19.CEREBROVASCULAR_ACCIDENT, it, recordedDate)
+                    )
+                }
                 tc.myocardialInfarction?.let {
                     add(Complications(patientRef, ComplicationsCovid19.MYOCARDIAL_INFARCTION, it, recordedDate))
                 }
-            } else if(logicalModel.complications.hasHadThromboembolicComplications == YesNoUnknown.NO) {
+            } else if (logicalModel.complications.hasHadThromboembolicComplications == YesNoUnknown.NO) {
                 add(Complications(patientRef, ComplicationsCovid19.EMBOLISM, YesNoUnknown.NO, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.THROMBOSIS, YesNoUnknown.NO, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.VENOUS_THROMBOSIS, YesNoUnknown.NO, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.PULMONARY_EMBOLISM, YesNoUnknown.NO, recordedDate))
-                add(Complications(patientRef, ComplicationsCovid19.CEREBROVASCULAR_ACCIDENT, YesNoUnknown.NO, recordedDate))
-                add(Complications(patientRef, ComplicationsCovid19.MYOCARDIAL_INFARCTION, YesNoUnknown.NO, recordedDate))
+                add(
+                    Complications(
+                        patientRef,
+                        ComplicationsCovid19.CEREBROVASCULAR_ACCIDENT,
+                        YesNoUnknown.NO,
+                        recordedDate
+                    )
+                )
+                add(
+                    Complications(
+                        patientRef,
+                        ComplicationsCovid19.MYOCARDIAL_INFARCTION,
+                        YesNoUnknown.NO,
+                        recordedDate
+                    )
+                )
             } else {
                 add(Complications(patientRef, ComplicationsCovid19.EMBOLISM, YesNoUnknown.UNKNOWN, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.THROMBOSIS, YesNoUnknown.UNKNOWN, recordedDate))
-                add(Complications(patientRef, ComplicationsCovid19.VENOUS_THROMBOSIS, YesNoUnknown.UNKNOWN, recordedDate))
+                add(
+                    Complications(
+                        patientRef,
+                        ComplicationsCovid19.VENOUS_THROMBOSIS,
+                        YesNoUnknown.UNKNOWN,
+                        recordedDate
+                    )
+                )
                 add(Complications(patientRef, ComplicationsCovid19.PULMONARY_EMBOLISM, YesNoUnknown.UNKNOWN, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.CEREBROVASCULAR_ACCIDENT, YesNoUnknown.UNKNOWN, recordedDate))
                 add(Complications(patientRef, ComplicationsCovid19.MYOCARDIAL_INFARCTION, YesNoUnknown.UNKNOWN, recordedDate))
@@ -390,98 +418,112 @@ fun logicalModelToGeccoProfile(
 
         //Todo: lab values
 
-        if(logicalModel.medication.hadCovid19Therapy != null){
-            if(logicalModel.medication.hadCovid19Therapy == YesNoUnknown.YES){
-                if(logicalModel.medication.covid19Therapy.productContainingSteroid == YesNoUnknown.YES){
+        if (logicalModel.medication.hadCovid19Therapy != null) {
+            if (logicalModel.medication.hadCovid19Therapy == YesNoUnknown.YES) {
+                if (logicalModel.medication.covid19Therapy.productContainingSteroid == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.STEROID, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingAtazanavir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingAtazanavir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.ATAZANAVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingDarunavir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingDarunavir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.DARUNAVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingChloroquine == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingChloroquine == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.CHLOROQUINE, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingHydroxychloroquine == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingHydroxychloroquine == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.HYDROXYCHLOROQUINE, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingIvermectin == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingIvermectin == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.IVERMECTIN, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingGanciclovir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingGanciclovir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.GANCICLOVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingOseltamivir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingOseltamivir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.OSELTAMIVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingRemdesivir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingRemdesivir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.REMDESIVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingRibavirin == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingRibavirin == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.RIBAVIRIN, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingTocilizumab == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingTocilizumab == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.TOCILIZUMAB, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingSarilumab == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingSarilumab == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.SARILUMAB, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingCalcineurinInhibitor == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingCalcineurinInhibitor == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.CALCINEURIN_INHIBITOR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingTumorNecrosisFactorAlphaInhibitor == YesNoUnknown.YES){
-                    add(MediCovid19(patientRef, MedicationCovid19.TUMOR_NECROSIS_FACTOR_ALPHA_INHIBITOR, unknownDateTime()))
+                if (logicalModel.medication.covid19Therapy.productContainingTumorNecrosisFactorAlphaInhibitor == YesNoUnknown.YES) {
+                    add(
+                        MediCovid19(
+                            patientRef,
+                            MedicationCovid19.TUMOR_NECROSIS_FACTOR_ALPHA_INHIBITOR,
+                            unknownDateTime()
+                        )
+                    )
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingInterleukin1ReceptorAntagonist == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingInterleukin1ReceptorAntagonist == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.INTERLEUKIN_1_RECEPTOR_ANTAGONIST, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingRuxolitinib == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingRuxolitinib == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.RUXOLITINIB, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingColchicine == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingColchicine == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.COLCHICINE, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingInterferon == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingInterferon == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.DARUNAVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingCalcifediol == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingCalcifediol == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.CALCIFEDIOL, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingZinc == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingZinc == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.ZINC, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingAntipyretic == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingAntipyretic == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.ANTIPYRETIC, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingCamostat == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingCamostat == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.CAMOSTAT, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingFavipiravir == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingFavipiravir == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.FAVIPIRAVIR, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.productContainingPlasma == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.productContainingPlasma == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.CONVALESCENT_PLASMA, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.steroidsGtHalfMgPerKgPrednisoneEquivalents == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.steroidsGtHalfMgPerKgPrednisoneEquivalents == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.STEROIDS_GT_0_5_MG_PER_KG, unknownDateTime()))
                 }
-                if(logicalModel.medication.covid19Therapy.streoidsLtHalfMgPerKgPrednisoneEquivalents == YesNoUnknown.YES){
+                if (logicalModel.medication.covid19Therapy.streoidsLtHalfMgPerKgPrednisoneEquivalents == YesNoUnknown.YES) {
                     add(MediCovid19(patientRef, MedicationCovid19.STEROIDS_LT_0_5_MG_PER_KG, unknownDateTime()))
                 }
             }
         }
-        if(logicalModel.medication.aceInhibitors != null){
+        if (logicalModel.medication.aceInhibitors != null) {
             add(MediACEInhibitor(patientRef, logicalModel.medication.aceInhibitors!!.status, unknownDateTime()))
         }
-        if(logicalModel.medication.immunoglobulins != null){
+        if (logicalModel.medication.immunoglobulins != null) {
             add(MediImmunoglobulins(patientRef, logicalModel.medication.immunoglobulins!!, unknownDateTime()))
         }
-        if(logicalModel.medication.hadAnticoagulation == YesNoUnknown.YES){
-            addMediAntiCoag(patientRef, AntiCoagulant.HEPARINGRUPPE, logicalModel.medication.anticoagulation.heparinGroup)
+        if (logicalModel.medication.hadAnticoagulation == YesNoUnknown.YES) {
+            addMediAntiCoag(
+                patientRef,
+                AntiCoagulant.HEPARINGRUPPE,
+                logicalModel.medication.anticoagulation.heparinGroup
+            )
             addMediAntiCoag(patientRef, AntiCoagulant.HEPARIN, logicalModel.medication.anticoagulation.heparin)
-            addMediAntiCoag(patientRef, AntiCoagulant.ANTITHROMBIN_III_ANTITHROMBIN_ALFA, logicalModel.medication.anticoagulation.antiThrombin3OrAntithrombinAlpha)
+            addMediAntiCoag(
+                patientRef,
+                AntiCoagulant.ANTITHROMBIN_III_ANTITHROMBIN_ALFA,
+                logicalModel.medication.anticoagulation.antiThrombin3OrAntithrombinAlpha
+            )
             addMediAntiCoag(patientRef, AntiCoagulant.DALTEPARIN, logicalModel.medication.anticoagulation.dalteparin)
             addMediAntiCoag(patientRef, AntiCoagulant.ENOXAPARIN, logicalModel.medication.anticoagulation.enoxaparin)
             addMediAntiCoag(patientRef, AntiCoagulant.NADROPARIN, logicalModel.medication.anticoagulation.nadroparin)
@@ -585,7 +627,7 @@ fun logicalModelToGeccoProfile(
             val symptom = property.findAnnotation<SymptomEnum>()!!.enum
             val value = property.call(logicalModel.symptoms)
             if (value != null) {
-                val (presence, severity) = if(value is YesNoUnknownWithSymptomSeverity) {
+                val (presence, severity) = if (value is YesNoUnknownWithSymptomSeverity) {
                     value.yesNoUnknown to value.severity
                 } else {
                     value as YesNoUnknown to null
@@ -605,7 +647,7 @@ fun logicalModelToGeccoProfile(
                 if (value is Float) {
                     val geccoUnits = extractUnitFromLabAnnotation(property)
                     val quantity = Quantity(value.toDouble())
-                    if(geccoUnits != null){
+                    if (geccoUnits != null) {
                         quantity.code = coding.code
                         quantity.system = coding.system
                         quantity.unit = geccoUnits.code
