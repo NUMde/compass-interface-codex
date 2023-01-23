@@ -18,26 +18,23 @@ fun main() {
 
 fun generateResponse(q: Questionnaire): QR {
     return QR().apply {
+//        status = QuestionnaireResponse.QuestionnaireResponseStatus.COMPLETED
         questionnaire = q.url + "|" + q.version
         authoredElement = DateTimeType.now()
         item = q.item.mapNotNull { generateItem(it) }
     }
 }
 
-fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = HashMap()): QRItem? {
+private fun generateItem(item: QItem, answersMap: MutableMap<String, List<QRAnswer>> = mutableMapOf()): QRItem? {
     val enabled = item.enableWhen.all {
         if (it.hasAnswer()) {
-            val enabledWhenAnswer = it.answer
-            val actualAnswer = answersMap[it.question]
+            val enabledWhenAnswer = (it.answer as? Coding)?.code
+            val actualAnswer = answersMap[it.question]?.firstOrNull()?.valueCoding?.code
             if (enabledWhenAnswer != null && actualAnswer != null) {
                 when (it.operator) {
                     EXISTS -> TODO()
-                    EQUAL -> (actualAnswer.firstOrNull()?.valueCoding?.code
-                        ?: false) == (enabledWhenAnswer as Coding).code
-
-                    NOT_EQUAL -> (actualAnswer.firstOrNull()?.valueCoding?.code
-                        ?: false) != (enabledWhenAnswer as Coding).code
-
+                    EQUAL -> actualAnswer == enabledWhenAnswer
+                    NOT_EQUAL -> actualAnswer != enabledWhenAnswer
                     GREATER_THAN -> TODO()
                     LESS_THAN -> TODO()
                     GREATER_OR_EQUAL -> TODO()
@@ -51,19 +48,17 @@ fun generateItem(item: QItem, answersMap: HashMap<String, List<QRAnswer>> = Hash
         return QRItem().apply {
             text = item.text
             linkId = item.linkId
-            answer = listOf(
-                QRAnswer().apply {
-                    value = when {
-                        item.answerOption.isNotEmpty() -> item.answerOption.random().value
-                        item.type == DECIMAL -> DecimalType(Random.nextDouble())
-                        item.type == STRING -> StringType("Foo")
-                        item.type == TEXT -> StringType("Foo")
-                        item.type == DATE -> DateType(Date())
-                        item.type == INTEGER -> IntegerType(Random.nextInt())
-                        else -> null
-                    }
+            answer = listOf(QRAnswer().apply {
+                value = when {
+                    item.answerOption.isNotEmpty() -> item.answerOption.random().value
+                    item.type == DECIMAL -> DecimalType(Random.nextDouble())
+                    item.type == STRING -> StringType("Foo")
+                    item.type == TEXT -> StringType("Foo")
+                    item.type == DATE -> DateType(Date())
+                    item.type == INTEGER -> IntegerType(Random.nextInt())
+                    else -> null
                 }
-            )
+            })
             answersMap[item.linkId] = answer
             this.item = item.item.mapNotNull { generateItem(it, answersMap) }
         }

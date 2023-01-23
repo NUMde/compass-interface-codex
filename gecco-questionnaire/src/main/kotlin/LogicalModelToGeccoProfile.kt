@@ -19,7 +19,7 @@ fun main() {
     val fileContent = LogicalModel::class.java.getResource("/generated-response.json").readText()
     val qr = parser.parseResource(fileContent) as QuestionnaireResponse
     copyExtensions(qr, LogicalModel.toQuestionnaire())
-    val logicalModel = toLogicalModel(questionnaire, qr)
+    val logicalModel = toLogicalModel(questionnaire, qr, getRenderersForGecco())
     println(logicalModel.toString())
     val q =
         parser.parseResource(FileReader("C:\\Users\\oehmj\\IdeaProjects\\gecco-questionnaire\\questionnaire.json")) as Questionnaire

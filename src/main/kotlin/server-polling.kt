@@ -109,7 +109,7 @@ private suspend fun pollingAction(
 
             copyExtensions(qr, questionnaire)
 
-            val logicalModel = toLogicalModel(questionnaire, qr)
+            val logicalModel = toLogicalModel(questionnaire, qr, getRenderersForGecco())
             val bundleBuilder = TransactionBundleBuilder()
             val bundle = logicalModelToGeccoProfile(
                 logicalModel,

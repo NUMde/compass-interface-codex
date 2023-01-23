@@ -20,7 +20,7 @@ fun main() {
     //jsonParser.encodeResourceToWriter(qr, System.out.writer())
     //println("end encoded qr")
 
-    val logicalModel = toLogicalModel(questionnaire, qr)
+    val logicalModel = toLogicalModelOld(questionnaire, qr)
     println("Current Logical Model")
     print(logicalModel.toString())
     println("End Current Logical Model")

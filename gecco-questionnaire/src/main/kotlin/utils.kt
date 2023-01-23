@@ -38,6 +38,8 @@ fun DateTimeType.toLocalDateTime() =
 
 fun LocalDate.toUtilDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
 
+fun DateType.toLocalDate() = LocalDate.of(this.year, this.month + 1, this.day)!!
+
 /**
  * Helper function that copies all the extensions from the Questionnaire's items to the QuestionnaireResponse's items
  */

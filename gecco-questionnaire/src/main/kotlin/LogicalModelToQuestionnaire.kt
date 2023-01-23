@@ -88,8 +88,7 @@ fun propertyToItem(
                     val prop = constructorPropertiesMap[param.name]!!
                     //Find the annotation on the property and use the FhirProfile as parameter for the call
                     //if no annotation is found on the property the search the annotation on the class instead
-                    val url =
-                        prop.findAnnotation<FhirProfile>()?.url ?: returnType.findAnnotation<FhirProfile>()?.url ?: ""
+                    val url = (prop.findAnnotation<FhirProfile>() ?: returnType.findAnnotation())?.url ?: ""
 
                     if (prop.findAnnotation<Ignore>() == null) {
                         add(propertyToItem(prop, "$newLinkId.${i + 1}", "$compassId.${prop.name}", url))
@@ -136,78 +135,51 @@ fun propertyToItem(
 }
 
 
-
 fun extractCodingFromLabAnnotation(property: KProperty<*>): Coding? {
-    for (annotation in property.annotations) {
-        if (annotation.annotationClass.simpleName!!.startsWith("Lab")) {
-            return when (annotation) {
-                is LabCRPEnum -> annotation.enum.coding
-                is LabFerritin -> annotation.enum.coding
-                is LabBilirubin -> annotation.enum.coding
-                is LabLactateDehydrogenase -> annotation.enum.coding
-                is LabCreatineMassPerVolume -> annotation.enum.coding
-                is LabCreatineMolesPerVolume -> annotation.enum.coding
-                is LabLactateMassPerVolume -> annotation.enum.coding
-                is LabLactateMolesPerVolume -> annotation.enum.coding
-                is LabLeukocytes -> annotation.enum.coding
-                is LabLymphocytes -> annotation.enum.coding
-                is LabPPT -> annotation.enum.coding
-                is LabAlbuminMassPerVolume -> annotation.enum.coding
-                is LabAlbuminMolesPerVolume -> annotation.enum.coding
-                is LabAntithrombin -> annotation.enum.coding
-                is LabFibrinogen -> annotation.enum.coding
-                is LabHemoglobinMassPerVolume -> annotation.enum.coding
-                is LabHemoglobinMolesPerVolume -> annotation.enum.coding
-                is LabInterleukin6 -> annotation.enum.coding
-                is LabNatriureticPeptideB -> annotation.enum.coding
-                is LabNeutrophils -> annotation.enum.coding
-                is LabPlateletsCountPerVolume -> annotation.enum.coding
-                is LabProcalcitonin -> annotation.enum.coding
-                is LabTroponinICardiacMassPerVolume -> annotation.enum.coding
-                is LabTroponinTCardiacMassPerVolume -> annotation.enum.coding
-                is LabINR -> annotation.enum.coding
-                else -> throw Exception("Unknown Lab Enum: $annotation")
-            }
-        }
-    }
-    return null
+    return extractLabAnnotation(property)?.getInstanceThroughReflection("coding")
 }
 
 fun extractUnitFromLabAnnotation(property: KProperty<*>): GeccoUnits? {
+    val annotation = extractLabAnnotation(property)
+    return annotation?.getInstanceThroughReflection("unit")
+}
+
+fun extractLabAnnotation(property: KProperty<*>): Enum<*>? {
     for (annotation in property.annotations) {
         if (annotation.annotationClass.simpleName!!.startsWith("Lab")) {
             return when (annotation) {
-                is LabCRPEnum -> annotation.enum.unit
-                is LabFerritin -> annotation.enum.unit
-                is LabBilirubin -> annotation.enum.unit
-                is LabLactateDehydrogenase -> annotation.enum.unit
-                is LabCreatineMassPerVolume -> annotation.enum.unit
-                is LabCreatineMolesPerVolume -> annotation.enum.unit
-                is LabLactateMassPerVolume -> annotation.enum.unit
-                is LabLactateMolesPerVolume -> annotation.enum.unit
-                is LabLeukocytes -> annotation.enum.unit
-                is LabLymphocytes -> annotation.enum.unit
-                is LabPPT -> annotation.enum.unit
-                is LabAlbuminMassPerVolume -> annotation.enum.unit
-                is LabAlbuminMolesPerVolume -> annotation.enum.unit
-                is LabAntithrombin -> annotation.enum.unit
-                is LabFibrinogen -> annotation.enum.unit
-                is LabHemoglobinMassPerVolume -> annotation.enum.unit
-                is LabHemoglobinMolesPerVolume -> annotation.enum.unit
-                is LabInterleukin6 -> annotation.enum.unit
-                is LabNatriureticPeptideB -> annotation.enum.unit
-                is LabNeutrophils -> annotation.enum.unit
-                is LabPlateletsCountPerVolume -> annotation.enum.unit
-                is LabProcalcitonin -> annotation.enum.unit
-                is LabTroponinICardiacMassPerVolume -> annotation.enum.unit
-                is LabTroponinTCardiacMassPerVolume -> annotation.enum.unit
-                is LabINR -> annotation.enum.unit
-                else -> throw Exception("Unknown Lab Enum: " + annotation)
+                is LabCRPEnum -> annotation.enum
+                is LabFerritin -> annotation.enum
+                is LabBilirubin -> annotation.enum
+                is LabLactateDehydrogenase -> annotation.enum
+                is LabCreatineMassPerVolume -> annotation.enum
+                is LabCreatineMolesPerVolume -> annotation.enum
+                is LabLactateMassPerVolume -> annotation.enum
+                is LabLactateMolesPerVolume -> annotation.enum
+                is LabLeukocytes -> annotation.enum
+                is LabLymphocytes -> annotation.enum
+                is LabPPT -> annotation.enum
+                is LabAlbuminMassPerVolume -> annotation.enum
+                is LabAlbuminMolesPerVolume -> annotation.enum
+                is LabAntithrombin -> annotation.enum
+                is LabFibrinogen -> annotation.enum
+                is LabHemoglobinMassPerVolume -> annotation.enum
+                is LabHemoglobinMolesPerVolume -> annotation.enum
+                is LabInterleukin6 -> annotation.enum
+                is LabNatriureticPeptideB -> annotation.enum
+                is LabNeutrophils -> annotation.enum
+                is LabPlateletsCountPerVolume -> annotation.enum
+                is LabProcalcitonin -> annotation.enum
+                is LabTroponinICardiacMassPerVolume -> annotation.enum
+                is LabTroponinTCardiacMassPerVolume -> annotation.enum
+                is LabINR -> annotation.enum
+                else -> error("Unknown Lab Enum: $annotation")
             }
         }
     }
     return null
 }
+
 
 fun Questionnaire.QuestionnaireItemComponent.extractEnum(clazz: Class<out Any>) {
     val enums = clazz.enumConstants

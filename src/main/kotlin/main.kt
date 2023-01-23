@@ -162,7 +162,7 @@ suspend fun main(args: Array<String>) {
                 println("SUCCESS")
             }
 
-            val logicalModel = toLogicalModel(questionnaire, qr)
+            val logicalModel = toLogicalModel(questionnaire, qr, getRenderersForGecco())
             printAndFlush("  Mapping to GECCO resources... ")
             val bundleBuilder = if (parsedArgs.simple) {
                 TransactionBundleBuilder()

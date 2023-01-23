@@ -4,12 +4,9 @@ import java.io.FileReader
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KMutableProperty
+import kotlin.reflect.*
 import kotlin.reflect.full.declaredMemberProperties
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaSetter
-import kotlin.reflect.typeOf
+import kotlin.reflect.full.withNullability
 
 fun main() {
     val jsonParser = FhirContext.forR4().newJsonParser().setPrettyPrint(true)
@@ -17,24 +14,115 @@ fun main() {
         jsonParser.parseResource(FileReader("./././questionnaire.json")) as Questionnaire
     val questionnaireResponse = generateResponse(questionnaire)
 
-    val logicalModel = toLogicalModel(questionnaire, questionnaireResponse)
+    val logicalModel = toLogicalModel(questionnaire, questionnaireResponse, getRenderersForGecco())
 
     println(logicalModel)
 
 }
 
-fun toLogicalModel(questionnaire: Questionnaire, qr: QuestionnaireResponse): LogicalModel {
+fun getRenderersForGecco() = listOf(
+    YesNoUnknownWithDateRenderer(),
+    YesNoUnknownWithIntentRenderer(),
+    YesNoUnknownWithSeverityRenderer()
+)
+
+
+fun toLogicalModel(
+    questionnaire: Questionnaire,
+    qr: QuestionnaireResponse,
+    renderers: List<ClassToItemRenderer<*>>
+): LogicalModel {
     copyExtensions(qr, questionnaire)
     val qrAnswerByGeccoId = qrAnswerByGeccoId(qr).filter { it.value?.value != null } as Map<String, QRAnswer>
-    val processedMap = processMappedCodes(qrAnswerByGeccoId)
 
     val logicalModel = LogicalModel()
+    val specialCases = mutableMapOf<String, Pair<QRAnswer, KCallable<*>>>()
+    for ((geccoId, answer) in qrAnswerByGeccoId) {
+        val (parent, property) = logicalModel.getPropertyThroughReflectionRecursive(geccoId)
+        property ?: error("Cannot find property for $geccoId")
 
-    for (item in processedMap) {
-        setValueForCode(logicalModel, item.key, item.value)
+        val value = if ((property.returnType.classifier as KClass<*>).javaObjectType.isEnum) {
+            extractEnum(answer.value as Coding, property.returnType)
+        } else if (isSpecialClass(property.returnType, renderers)) {
+            specialCases[geccoId] = answer to property
+            null
+        } else {
+            when (property.returnType) {
+                typeOf<Int?>() -> toInt(answer.value)
+                typeOf<Float?>() -> toFloat(answer.value)
+                typeOf<Double?>() -> toFloat(answer.value)?.toDouble()
+                typeOf<Date?>() -> toDate(answer.value)
+                typeOf<LocalDate?>() -> (answer.value as? DateType)?.toLocalDate()
+                typeOf<String?>() -> toStringValue(answer.value)
+                typeOf<YesNoUnknown?>() -> toYesNoUnknown(answer.value)
+                typeOf<YesNoUnknownOtherNa>() -> toYesNoUnknownOtherNa(answer.value)
+                else -> null
+            }
+        }
+        if (value != null) {
+            parent.setPropertyThroughReflection(geccoId.substringAfterLast("."), value)
+        }
+    }
+
+    for ((prefix, elements) in specialCases.entries.groupBy { it.key.substringBeforeLast(".") }) {
+        val (_, property) = elements.first().value
+        val answerByGeccoId = elements.map { it.key to it.value.first }.toMap()
+        val value = renderers.find { it.getType() == property.returnType.withNullability(false) }
+            ?.parse(prefix, answerByGeccoId)
+        val (that, _) = logicalModel.getPropertyThroughReflectionRecursive(prefix)
+        (property as KMutableProperty<*>).setter.call(that, value)
     }
 
     return logicalModel
+}
+
+fun isSpecialClass(type: KType, renderers: List<ClassToItemRenderer<*>>): Boolean {
+    return renderers.any { it.getType() == type.withNullability(false) }
+}
+
+fun extractEnum(coding: Coding, returnType: KType): Enum<*> {
+    return when (returnType) {
+        typeOf<ChronicKidneyDisease?>() -> getByCoding2<ChronicKidneyDisease>(coding)
+        typeOf<Diabetes?>() -> getByCoding2<Diabetes>(coding)
+        typeOf<Countries?>() -> getByCoding<Countries>(coding)
+        typeOf<FederalStates?>() -> getByCoding<FederalStates>(coding)
+        typeOf<CancerStatus?>() -> getByCoding<CancerStatus>(coding)
+        typeOf<Resuscitation?>() -> getByCoding<Resuscitation>(coding)
+        typeOf<SmokingStatus?>() -> getByCoding2<SmokingStatus>(coding)
+        typeOf<BirthSex?>() -> getByCoding<BirthSex>(coding)
+        typeOf<EthnicGroup?>() -> getByCoding<EthnicGroup>(coding)
+        typeOf<FrailityScore?>() -> getByCoding2<FrailityScore>(coding)
+        typeOf<PregnancyStatus?>() -> getByCoding2<PregnancyStatus>(coding)
+        typeOf<Covid19Vaccine?>() -> getByCoding<Covid19Vaccine>(coding)
+        typeOf<RadiologicFindings?>() -> getByCoding2<RadiologicFindings>(coding)
+        typeOf<ACEInhibitorAdministration?>() -> getByCoding<ACEInhibitorAdministration>(coding)
+        typeOf<StageAtDiagnosis?>() -> getByCoding2<StageAtDiagnosis>(coding)
+        typeOf<DetectedNotDetectedInconclusive?>() ->
+            getByCoding2<DetectedNotDetectedInconclusive>(coding)
+
+        typeOf<TypeOfDischarge?>() -> getByCoding2<TypeOfDischarge>(coding)
+        typeOf<VentilationTypes?>() -> getByCoding<VentilationTypes>(coding)
+        typeOf<YesNoUnknown?>() -> toYesNoUnknown(coding)
+        typeOf<YesNoUnknownOtherNa?>() -> toYesNoUnknownOtherNa(coding)
+        else -> error("No enum for $returnType  $coding")
+    }!!
+}
+
+fun LogicalModel.getPropertyThroughReflectionRecursive(geccoId: String): Pair<Any, KCallable<*>?> {
+    val obj = this.getInstanceThroughReflection<Any>(geccoId.substringBefore("."))
+    return obj!!.getPropertyThroughReflectionRecursive(geccoId.substringAfter("."))
+}
+
+fun Any.getPropertyThroughReflectionRecursive(geccoId: String): Pair<Any, KCallable<*>?> {
+    if (geccoId.contains(".")) {
+        val obj = this.getInstanceThroughReflection<Any>(geccoId.substringBefore("."))
+        if (obj == null) {
+            return this to this.getPropertyThroughReflection(geccoId.substringBefore("."))
+        }
+        return obj.getPropertyThroughReflectionRecursive(geccoId.substringAfter("."))
+    } else {
+        return this to this.getPropertyThroughReflection(geccoId)
+    }
 }
 
 fun qrAnswerByGeccoId(qr: QuestionnaireResponse): Map<String, QRAnswer?> {
@@ -119,42 +207,7 @@ fun toInt(value: Type?) = (value as? IntegerType)?.value?.toInt()
 fun toStringValue(value: Type) = (value as? StringType)?.valueAsString
 
 
-fun setValueForCode(
-    logicalModel: LogicalModel,
-    code: String,
-    value: Any,
-    subProperties: Any? = null,
-    layer: Int = 0
-) {
-    val splittedCode = code.split(".")
-
-    val subProps: Any?
-    val instance: Any?
-
-    if (subProperties != null) {
-        subProps = subProperties.getPropertyThroughReflection(splittedCode[layer])
-        instance = subProperties.getInstanceThroughReflection(splittedCode[layer])
-    } else {
-        subProps = logicalModel.getPropertyThroughReflection(splittedCode[layer])
-        instance = logicalModel.getInstanceThroughReflection(splittedCode[layer])
-    }
-
-    if (subProps != null) {
-        if (splittedCode.size > layer + 1) {
-            //Walk through Logical model until all codes are used
-            setValueForCode(logicalModel, code, value, instance, layer + 1)
-        } else {
-            try {
-                //Terminal value. Call setter on parent
-                subProperties?.setPropertyThroughReflection((subProps as KMutableProperty<*>).name, value)
-            } catch (e: Exception) {
-                println("Could not set value for code $code with type ${value.javaClass.simpleName}; Expected ${(subProps as KMutableProperty<*>).returnType}")
-            }
-        }
-    }
-}
-
-fun Any.getPropertyThroughReflection(propertyName: String): Any? {
+fun Any.getPropertyThroughReflection(propertyName: String): KCallable<*>? {
     return kotlin.runCatching {
         this::class.members.find { it.name == propertyName }
     }.getOrNull()
@@ -177,373 +230,3 @@ fun Any.setPropertyThroughReflection(propertyName: String, value: Any) {
         }
     }
 }
-
-class ProcessingHolder(var map: MutableMap<String, QRAnswer>, var result: MutableMap<String, Any>) {
-    fun addResultAndFilterCodes(resultsToAdd: Map<String, Any>, subCodes: Map<String, Map<String, QRAnswer>>? = null) {
-        this.result.putAll(resultsToAdd)
-        this.map = this.map.filter { !this.result.containsKey(it.key) }.toMutableMap()
-
-        if (subCodes != null) {
-            for (entry in subCodes.entries) {
-                for (subCode in entry.value) {
-                    this.map.remove(subCode.key)
-                }
-            }
-        }
-
-    }
-}
-
-
-fun processMappedCodes(map: Map<String, QRAnswer>): Map<String, Any> {
-    val processingHolder = ProcessingHolder(map.toMutableMap(), HashMap())
-    //Order somewhat important as logic used to find codes overlaps
-
-    val specialTypes = getSpecialTypeToCodeAndAnswer(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(createSpecialTypeForCodeAndAnswer(specialTypes))
-
-    val coronaCodes = findCovid19VaccinationCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(createCovid19VaccinationFromCodes(coronaCodes), coronaCodes)
-
-    val statusWithDate = findYesNoUnknownWithDateCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(createYesNoUnknownWithDateFromCodes(statusWithDate), statusWithDate)
-
-    val symptomSeverity = findYesNoUnknownWithSymptomSeverityCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(
-        createYesNoUnknownWithSymptomSeverityFromCodes(symptomSeverity),
-        symptomSeverity
-    )
-
-    val yesNoUnknownCodes = findYesNoUnknownCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(createYesNoUnknownFromCodes(yesNoUnknownCodes), yesNoUnknownCodes)
-
-    val yesNoUnknownOtherNaCodes = findYesNoUnknownOtherNaCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(
-        createYesNoUnknownOtherNaFromCodes(yesNoUnknownOtherNaCodes),
-        yesNoUnknownOtherNaCodes
-    )
-
-    val yesNoUnknownWithIntent = findYesNoUnknownWithIntentCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(
-        createYesNoUnknownWithIntentFromCodes(yesNoUnknownWithIntent),
-        yesNoUnknownWithIntent
-    )
-
-    val valueCodes = findValueCodes(processingHolder.map)
-    processingHolder.addResultAndFilterCodes(
-        createValuesFromCodes(valueCodes),
-        valueCodes.mapValues { mapOf(it.key to it.value) })
-
-    return processingHolder.result
-}
-
-data class SpecialEnumTypeToCodeAndAnswer(val clazz: KClass<*>?, val code: String, val answer: QRAnswer)
-
-fun getSpecialTypesFromLogicalModelWithPath(subProperties: Any, path: String = ""): Map<String, KClass<*>> {
-    val map = HashMap<String, KClass<*>>()
-    for (property in subProperties.javaClass.kotlin.memberProperties) {
-        val propertyValue = property.get(subProperties)
-
-        val newPath = if (path.isNotEmpty()) "$path.${property.name}" else property.name
-
-        if (propertyValue?.javaClass?.kotlin?.memberProperties?.isNotEmpty() == true) {
-            map.putAll(getSpecialTypesFromLogicalModelWithPath(propertyValue, newPath))
-        } else {
-            when (property.returnType.toString()) {
-                "YesNoUnknown?" -> {}
-                "YesNoUnknownWithIntent?" -> {}
-                "YesNoUnknownOtherNa?" -> {}
-                "YesNoUnknownWithSymptomSeverity?" -> {}
-                "YesNoUnknownWithDate?" -> {}
-                "Covid19Vaccine?" -> {}
-                "kotlin.Float?" -> {}
-                "java.time.LocalDate?" -> {}
-                "kotlin.Int?" -> {}
-                "kotlin.String?" -> {}
-                //Only for classes that cannot be inferred by logic
-                else -> {
-                    map[newPath] = property.returnType.classifier as KClass<*>
-                }
-            }
-        }
-    }
-    return map
-}
-
-fun getSpecialTypeToCodeAndAnswer(map: Map<String, QRAnswer>): List<SpecialEnumTypeToCodeAndAnswer> {
-    val codesToFind = getSpecialTypesFromLogicalModelWithPath(LogicalModel())
-
-    return map.entries
-        .filter { codesToFind.containsKey(it.key) }
-        .map { (key, value) -> SpecialEnumTypeToCodeAndAnswer(codesToFind[key], key, value) }
-}
-
-fun createSpecialTypeForCodeAndAnswer(list: List<SpecialEnumTypeToCodeAndAnswer>): Map<String, Any> {
-    val result = HashMap<String, Any>()
-    for (entry in list) {
-        try {
-            val coding = entry.answer.valueCoding
-            result[entry.code] = when (entry.clazz) {
-                typeOf<ChronicKidneyDisease>().classifier -> getByCoding2<ChronicKidneyDisease>(coding)!!
-                typeOf<Diabetes>().classifier -> getByCoding2<Diabetes>(coding)!!
-                typeOf<Countries>().classifier -> getByCoding<Countries>(coding)!!
-                typeOf<FederalStates>().classifier -> getByCoding<FederalStates>(coding)!!
-                typeOf<CancerStatus>().classifier -> getByCoding<CancerStatus>(coding)!!
-                typeOf<Resuscitation>().classifier -> getByCoding<Resuscitation>(coding)!!
-                typeOf<SmokingStatus>().classifier -> getByCoding2<SmokingStatus>(coding)!!
-                typeOf<BirthSex>().classifier -> getByCoding<BirthSex>(coding)!!
-                typeOf<EthnicGroup>().classifier -> getByCoding<EthnicGroup>(coding)!!
-                typeOf<FrailityScore>().classifier -> getByCoding2<FrailityScore>(coding)!!
-                typeOf<PregnancyStatus>().classifier -> getByCoding2<PregnancyStatus>(coding)!!
-                typeOf<RadiologicFindings>().classifier -> getByCoding2<RadiologicFindings>(coding)!!
-                typeOf<ACEInhibitorAdministration>().classifier -> getByCoding<ACEInhibitorAdministration>(coding)!!
-                typeOf<StageAtDiagnosis>().classifier -> getByCoding2<StageAtDiagnosis>(coding)!!
-                typeOf<DetectedNotDetectedInconclusive>().classifier ->
-                    getByCoding2<DetectedNotDetectedInconclusive>(coding)!!
-
-                typeOf<TypeOfDischarge>().classifier -> getByCoding2<TypeOfDischarge>(coding)!!
-                typeOf<VentilationTypes>().classifier -> getByCoding<VentilationTypes>(coding)!!
-                else -> {}
-            }
-        } catch (e: Exception) {
-            println("Could not fetch correct Enum type. QuestionnaireResponse is probably faulty. $e")
-        }
-    }
-
-    return result
-}
-
-fun findCovid19VaccinationCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.key.substringAfterLast(".").contains("date") ||
-                it.key.substringAfterLast(".").contains("status") ||
-                it.key.substringAfterLast(".").contains("vaccine")
-    }.groupBy { it.key.substringBeforeLast(".") }
-        .mapValues { it.value.toMap() }
-        .filter { it.value.size > 2 }
-}
-
-private fun <K, V> List<Map.Entry<K, V>>.toMap() = this.associate { it.toPair() }
-
-fun createCovid19VaccinationFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
-    val result = mutableMapOf<String, Any>()
-    for (code in map) {
-        val coding = Covid19Vaccination()
-        for (subcode in code.value) {
-            if (subcode.key.contains("status")) {
-                coding.status = toYesNoUnknown(subcode.value.valueCoding)
-            } else if (subcode.key.contains("date")) {
-                coding.date = toLocalDate(subcode.value.value)
-            } else if (subcode.key.contains("vaccine")) {
-                coding.vaccine = getByCoding<Covid19Vaccine>(subcode.value.valueCoding)
-            }
-        }
-        result[code.key] = coding
-    }
-    return result
-}
-
-fun findYesNoUnknownWithDateCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.key.substringAfterLast(".").contains("date") ||
-                it.key.substringAfterLast(".").contains("status")
-    }.groupBy { it.key.substringBeforeLast(".") }
-        .filter { it.value.size > 1 }.mapValues { it.value.toMap() }
-}
-
-fun createYesNoUnknownWithDateFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
-    val result = mutableMapOf<String, Any>()
-    for (code in map) {
-        val coding = YesNoUnknownWithDate()
-        for (subcode in code.value) {
-            if (subcode.key.contains("status")) {
-                coding.yesNoUnknown = toYesNoUnknown(subcode.value.valueCoding)
-            } else if (subcode.key.contains("date")) {
-                coding.date = toDate(subcode.value.value)
-            }
-        }
-        result[code.key] = coding
-    }
-    return result
-}
-
-
-fun findYesNoUnknownWithSymptomSeverityCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.key.substringAfterLast(".").contains("presence") ||
-                it.key.substringAfterLast(".").contains("severity")
-    }.groupBy { it.key.substringBeforeLast(".") }
-        .filter { it.value.size > 1 }
-        .mapValues { it.value.toMap() }
-}
-
-fun createYesNoUnknownWithSymptomSeverityFromCodes(map: Map<String, Map<String, QRAnswer>>): HashMap<String, Any> {
-    val result = HashMap<String, Any>()
-    for (code in map) {
-        val coding = YesNoUnknownWithSymptomSeverity()
-        for (subcode in code.value) {
-            if (subcode.key.contains("severity")) {
-                coding.severity = getByCoding<SymptomSeverity>(subcode.value.valueCoding)
-            } else if (subcode.key.contains("presence")) {
-                coding.yesNoUnknown = toYesNoUnknown(subcode.value.valueCoding)
-            }
-        }
-        result[code.key] = coding
-    }
-    return result
-}
-
-fun findYesNoUnknownCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.value.value is Coding &&
-                (it.value.valueCoding.code == YesNoUnknown.YES.coding.code
-                        || it.value.valueCoding.code == YesNoUnknown.NO.coding.code
-                        || it.value.valueCoding.code == YesNoUnknown.UNKNOWN.coding.code)
-    }.groupBy { it.key }
-        .mapValues { it.value.toMap() }
-}
-
-fun createYesNoUnknownFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
-    val result = mutableMapOf<String, Any>()
-    for (code in map) {
-        // Should always have one entry, but to be consistent in syntax
-        for (subcode in code.value) {
-            result[code.key] = toYesNoUnknown(subcode.value.valueCoding)!!
-        }
-    }
-    return result
-}
-
-fun findYesNoUnknownOtherNaCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.value.value is Coding &&
-                (it.value.valueCoding.code == YesNoUnknownOtherNa.YES.coding.code
-                        || it.value.valueCoding.code == YesNoUnknownOtherNa.NO.coding.code
-                        || it.value.valueCoding.code == YesNoUnknownOtherNa.UNKNOWN.coding.code
-                        || it.value.valueCoding.code == YesNoUnknownOtherNa.OTHER.coding.code
-                        || it.value.valueCoding.code == YesNoUnknownOtherNa.NA.coding.code)
-    }.groupBy { it.key }.mapValues { it.value.toMap() }
-}
-
-fun createYesNoUnknownOtherNaFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
-    val result = HashMap<String, YesNoUnknownOtherNa>()
-    for (code in map) {
-        // Should always have one entry, but to be consistent in syntax
-        for (subcode in code.value) {
-            result[code.key] = toYesNoUnknownOtherNa(subcode.value.valueCoding)!!
-        }
-    }
-    return result
-}
-
-fun findYesNoUnknownWithIntentCodes(map: Map<String, QRAnswer>): Map<String, Map<String, QRAnswer>> {
-    return map.entries.filter {
-        it.key.substringAfterLast(".").contains("intent") ||
-                it.key.substringAfterLast(".").contains("administration")
-    }.groupBy { it.key.substringBeforeLast(".") }
-        .filter { it.value.size > 1 }
-        .mapValues { it.value.toMap() }
-}
-
-fun createYesNoUnknownWithIntentFromCodes(map: Map<String, Map<String, QRAnswer>>): Map<String, Any> {
-    val result = HashMap<String, Any>()
-    for ((geccoId, answers) in map) {
-        val coding = YesNoUnknownWithIntent()
-        for (subcode in answers) {
-            if (subcode.key.contains("intent")) {
-                coding.intent = getByCoding2<TherapeuticIntent>(subcode.value.valueCoding)
-            } else if (subcode.key.contains("administration")) {
-                coding.administration = toYesNoUnknown(subcode.value.valueCoding)
-            }
-        }
-        result[geccoId] = coding
-    }
-    return result
-}
-
-fun findValueCodes(map: Map<String, QRAnswer>): Map<String, QRAnswer> {
-    return map.filterValues {
-        it.value is IntegerType || it.value is DecimalType || it.value is StringType || it.value is DateType
-    }
-}
-
-fun createValuesFromCodes(map: Map<String, QRAnswer>): Map<String, Any> {
-    val result = HashMap<String, Any>()
-    for ((geccoId, answer) in map) {
-        val value = when (answer.value::class) {
-            StringType::class -> toStringValue(answer.value)
-            DateType::class -> toLocalDate(answer.value)
-            IntegerType::class -> toInt(answer.value)
-            DecimalType::class -> toFloat(answer.value)
-            else -> null
-        }
-        result[geccoId] = value!!
-    }
-    return result
-}
-
-
-fun extractLab(mapByExtension: HashMap<String, QRAnswer>): LaboratoryValuesLaboratoryValue {
-    val result = LaboratoryValuesLaboratoryValue()
-    for (property in result::class.declaredMemberProperties) {
-        if (property is KMutableProperty<*>) {
-            val valueRaw = mapByExtension["laboratoryValues.laboratoryValues.${property.name}"]?.value
-            try {
-                property.javaSetter!!.invoke(
-                    result, when (valueRaw) {
-                        is DecimalType -> valueRaw.value.toFloat()
-                        is StringType -> valueRaw.value
-                        is Coding -> toYesNoUnknown(valueRaw)
-                        else -> null
-                    }
-                )
-                val extension = mapByExtension["laboratoryValues.laboratoryValues.${property.name}"]?.getExtensionByUrl(
-                    "http://hl7.org/fhir/StructureDefinition/questionnaire-unit"
-                )?.value
-            } catch (e: Exception) {
-                println(property.name + "   " + valueRaw)
-                println(e)
-            }
-        }
-    }
-    //TODO: Test this function
-    return result
-}
-
-/*
-fun qItemByGeccoId(response: QR, hashMap: HashMap<String, QRAnswer> = HashMap()): HashMap<String, QRAnswer> {
-    response.item.forEach { itemComponent -> itemComponent.answer?.forEach { qItemByGeccoId(it, hashMap) } }
-    response.item.forEach { qItemByGeccoId(it, hashMap) }
-//    response.extension?.forEach { extension -> hashMap.put((extension.value as CodeType).code, responseAnswer)}
-    return hashMap
-}
-
-
-fun qItemByGeccoId(responseItem: QRItem, hashMap: HashMap<String, QRAnswer> = HashMap()): HashMap<String, QRAnswer> {
-    responseItem.item.filterNotNull()
-        .forEach { itemComponent -> itemComponent.answer?.forEach { qItemByGeccoId(it, hashMap) } }
-    responseItem.item.forEach { qItemByGeccoId(it, hashMap) }
-
-    val extension =
-        responseItem.getExtensionByUrl("https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem")
-    if (extension != null) {
-        hashMap[(extension.value as Coding).code] = responseItem.answerFirstRep
-    }
-
-    return hashMap
-}
-
-fun qItemByGeccoId(
-    responseAnswer: QRAnswer,
-    hashMap: HashMap<String, QRAnswer> = HashMap()
-): HashMap<String, QRAnswer> {
-    responseAnswer.item.forEach { itemComponent -> itemComponent?.answer?.forEach { qItemByGeccoId(it, hashMap) } }
-//    responseAnswer.extension?.forEach { extension -> hashMap[(extension.value as Coding).code] = responseAnswer }
-    val extension =
-        responseAnswer.getExtensionByUrl("https://num-compass.science/fhir/StructureDefinition/CompassGeccoItem")
-    if (extension != null) {
-        hashMap[(extension.value as Coding).code] = responseAnswer
-    }
-    return hashMap
-}
-*/
