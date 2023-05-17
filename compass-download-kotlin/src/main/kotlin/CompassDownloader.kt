@@ -8,14 +8,12 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import org.bouncycastle.cms.*
 import org.bouncycastle.cms.jcajce.JceCMSContentEncryptorBuilder
 import org.bouncycastle.cms.jcajce.JceKeyTransEnvelopedRecipient
-import org.bouncycastle.cms.jcajce.JceKeyTransRecipient
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.nio.charset.StandardCharsets
@@ -124,7 +122,7 @@ class CompassDownloader(
         if (response.status != HttpStatusCode.OK) {
             val bodyAsText = response.bodyAsText()
             log.error { "retrieveAccessToken(): Could not retrieve access token! ${response.status} $bodyAsText" }
-            error("Could not retrieve access token! Server responded $bodyAsText")
+            error("Could not retrieve access token! ${response.status} Server response: '$bodyAsText'!")
         }
 
         val tokenResponse: TokenResponse = response.body()
@@ -203,10 +201,9 @@ class CompassDownloader(
 
 
     fun verifyJWTAndDecode(jwt: String): String {
-        val charset = StandardCharsets.UTF_8
         val parts = jwt.split('.')
-        val header = parts[0].toByteArray(charset)
-        val payload = parts[1].toByteArray(charset)
+        val header = parts[0].toByteArray(Charsets.UTF_8)
+        val payload = parts[1].toByteArray(Charsets.UTF_8)
         val tokenSignature = Base64.getUrlDecoder().decode(parts[2])
 
         //TODO: Verify header is always {"alg":"RS256"}
@@ -218,7 +215,7 @@ class CompassDownloader(
         if (!rsaSignature.verify(tokenSignature)) {
             throw SignatureException("JWT cannot be verified!")
         }
-        return Base64.getDecoder().decode(payload).toString(StandardCharsets.UTF_8)
+        return Base64.getDecoder().decode(payload).toString(Charsets.UTF_8)
     }
 
 
@@ -235,18 +232,15 @@ class CompassDownloader(
     }
 
     private fun decryptPkcs7CMS(encryptedData: ByteArray): ByteArray {
-        val envelopedData = CMSEnvelopedData(encryptedData)
-        val recipients = envelopedData.recipientInfos.recipients
-        val recipientInfo = recipients.iterator().next() as KeyTransRecipientInformation
-        val recipient: JceKeyTransRecipient = JceKeyTransEnvelopedRecipient(this.privateKey)
-        return recipientInfo.getContent(recipient)
+        val recipientInfo = CMSEnvelopedData(encryptedData).recipientInfos.recipients.first()
+        return recipientInfo.getContent(JceKeyTransEnvelopedRecipient(privateKey))
     }
 
 
     suspend fun retrieveAllQueueItems(): List<QueueItem> {
         val accessToken = retrieveAccessToken()
         val response = loadQueueItemsByPage(1, accessToken)
-        val jsonPayload: String = verifyJWTAndDecode(response.cTransferList)
+        val jsonPayload = verifyJWTAndDecode(response.cTransferList)
 
         return buildList {
             addAll(Json.decodeFromString(jsonPayload))

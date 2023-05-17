@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.8.20"
+    kotlin("jvm") version "1.8.21"
     application
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
@@ -28,7 +28,7 @@ val kotlinLoggingVersion: String by project
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("ch.qos.logback", "logback-classic", "1.4.1")
+    implementation("ch.qos.logback", "logback-classic", "1.4.7")
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation(project("compass-download-kotlin"))
@@ -38,7 +38,7 @@ dependencies {
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-validation:$hapiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
 
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
 

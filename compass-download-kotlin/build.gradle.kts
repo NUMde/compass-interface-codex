@@ -18,7 +18,7 @@ val ktor_version: String by project
 val kotlinLoggingVersion: String by project
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 
     implementation("io.ktor:ktor-client-core-jvm:$ktor_version")
     implementation("io.ktor:ktor-client-apache-jvm:$ktor_version")
@@ -27,7 +27,7 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
 
-    implementation("ch.qos.logback", "logback-classic", "1.2.3")
+    implementation("ch.qos.logback", "logback-classic", "1.4.7")
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation("org.bouncycastle:bcprov-jdk15on:1.68")
