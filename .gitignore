@@ -6,6 +6,6 @@
 /build
 /captures
 /verify-out
-
+/supplementary
 
 gecco-bundle-*.json
