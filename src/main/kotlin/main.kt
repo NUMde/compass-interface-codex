@@ -226,39 +226,32 @@ suspend fun main(args: Array<String>) {
 /**
  * Upload all Bundle entries individually with POST requests because fhirbridge does not support overall transaction
  */
-private fun uploadBundleEntries(
-    bundle: Bundle,
-    queueItem: QueueItem,
-    client: IGenericClient,
-    parser: IParser
-) {
-    var newPatientReference: Reference? = null //Update patient reference if server decides to change it TODO: Test it
-    for ((index, entry) in bundle.entry.withIndex()) {
-        if (entry.resource !is Questionnaire && entry.resource !is Device && entry.resource !is Organization) {
+private fun uploadBundleEntries(bundle: Bundle, queueItem: QueueItem, client: IGenericClient, parser: IParser) {
+    var newPatientReference: Reference? = null //Update patient reference if server decides to change it
+    for ((index, resource) in bundle.entry.map { it.resource }.withIndex()) {
+        if (resource !is Questionnaire && resource !is Device && resource !is Organization) {
             try {
-                printAndFlush("    $index: ${entry.resource.meta.profile.joinToString(", ") { it.value }}")
-                if (entry.resource is Patient) {
-                    val patient = entry.resource as Patient
-
-                    patient.identifier.add(Identifier().apply {
+                printAndFlush("    $index: ${resource.meta.profile.joinToString(", ") { it.value }}")
+                if (resource is Patient) {
+                    resource.identifier.add(Identifier().apply {
                         system = COMPASS_SUBJECT_ID
                         value = queueItem.SubjectId
                     })
-                    val outcome = client.create().resource(patient).conditional().where(
+                    val outcome = client.create().resource(resource).conditional().where(
                         Patient.IDENTIFIER.exactly().systemAndIdentifier(COMPASS_SUBJECT_ID, queueItem.SubjectId)
                     ).execute()
                     print(" => " + outcome.id)
                     newPatientReference = Reference(outcome.id)
                 } else {
-                    changePatientId(entry.resource, newPatientReference!!)
-                    val outcome = client.create().resource(entry.resource).execute()
+                    changePatientId(resource, newPatientReference!!)
+                    val outcome = client.create().resource(resource).execute()
                     print(" => " + outcome.id)
                 }
                 println(" DONE")
             } catch (e: Exception) {
                 println()
-                println("Cannot upload ${entry.resource}: $e")
-                println(parser.encodeResourceToString(entry.resource))
+                println("Cannot upload ${resource}: $e")
+                println(parser.encodeResourceToString(resource))
                 println()
             }
         }

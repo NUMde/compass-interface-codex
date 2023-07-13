@@ -4,11 +4,14 @@ import java.nio.file.Paths
  * Sample usage of the download script
  */
 suspend fun main() {
-    val privateKeyFile = Paths.get(ClassLoader.getSystemResource("private_key.pem").toURI()).toFile()
-    val publicKeyFile = Paths.get(ClassLoader.getSystemResource("public_key.pem").toURI()).toFile()
-    val certFile = Paths.get(ClassLoader.getSystemResource("cacert.pem").toURI()).toFile()
+    val privateKeyFile =
+        Paths.get("C:\\Users\\oehmj\\IdeaProjects\\compass-interface-codex\\supplementary\\private_key.pem").toFile()
+    val publicKeyFile =
+        Paths.get("C:\\Users\\oehmj\\IdeaProjects\\compass-interface-codex\\supplementary\\public_key.pem").toFile()
+    val certFile =
+        Paths.get("C:\\Users\\oehmj\\IdeaProjects\\compass-interface-codex\\supplementary\\cacert.pem").toFile()
     val downloader = CompassDownloader(
-        serverUrl = "http://127.0.0.1:8080/",
+        serverUrl = "http://127.0.0.1:8081/",
         apiID = "test",
         apiKey = "gKdKLYG2g0-Y1EllI0-W",
         publicKey = PemUtils.loadPublicKey(publicKeyFile),

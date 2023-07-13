@@ -18,6 +18,6 @@ dependencies {
     implementation(project(":gecco-easy"))
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.0")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.0")
 }
 

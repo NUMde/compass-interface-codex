@@ -79,7 +79,7 @@ fun AnaChronicLungDisease(
 	recordedDate: DateTimeType
 ) =
 	Anamnese(patientRef, chronicLungDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-lung-diseases") //TODO: FIXME
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/chronic-lung-diseases")
 		category = listOf(CodeableConcept(snomed("418112009", "Pulmonary medicine")))
 	}
 
@@ -90,7 +90,7 @@ fun AnaCardiovascular(
 	recordedDate: DateTimeType,
 ) =
 	Anamnese(patientRef, cardiovascularDisease.codeableConcept, yesNoUnknown, recordedDate).apply {
-		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/cardiovascular-diseases") //TODO: FIXME
+		meta.addProfile("https://www.netzwerk-universitaetsmedizin.de/fhir/StructureDefinition/cardiovascular-diseases")
 		category = listOf(CodeableConcept(snomed("722414000", "Vascular medicine")))
 	}
 

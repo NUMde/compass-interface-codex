@@ -131,12 +131,7 @@ private suspend fun pollingAction(
     downloader.markCTransferListIdsAsDownloaded(queueItems.map { it.UUID }, accessToken)
 }
 
-private fun uploadBundleEntries(
-    bundle: Bundle,
-    queueItem: QueueItem,
-    client: IGenericClient,
-    parser: IParser,
-) {
+private fun uploadBundleEntries(bundle: Bundle, queueItem: QueueItem, client: IGenericClient, parser: IParser) {
     var newPatientReference: Reference? = null
     for (resource in bundle.entry.map { it.resource }) {
         if (resource !is Questionnaire && resource !is Device && resource !is Organization) {
