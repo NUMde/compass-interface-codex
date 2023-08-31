@@ -38,7 +38,7 @@ dependencies {
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-validation:$hapiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
 
