@@ -4,7 +4,7 @@ uses [FHIR Questionnaires](http://hl7.org/fhir/questionnaire.html))
 and [NUM-CODEX RDP](https://www.netzwerk-universitaetsmedizin.de/projekte/codex) platform (which uses
 the [FHIR GECCO Profiles](https://simplifier.net/guide/germancoronaconsensusdataset-implementationguide/home)).
 
-![](docs/Transform.png)
+![](docs/transform.png)
 
 This project consists of three components, which can also be used on their own:
 
@@ -15,10 +15,11 @@ This project consists of three components, which can also be used on their own:
 * [**gecco-questionnaire**](./gecco-questionnaire): Defines a logical model for gecco and creates the reference
   Questionnaire from that, also contains code to extract the GECCO Profiles from the logical model.
 
-![](docs/Compass-Pipeline-Complete-white.png)
+![](docs/compass-pipeline-complete.png)
   
 ## How dows this work?
-![](docs/Overview%20LogicalModel.png)
+
+![](docs/overview-logicalmodel.png)
 The LogicalModel (`gecco-questionnaire/src/main/kotlin/LogicalModel.kt`) is introspected via reflection to generate a reference Questionnaire,
 from which the items can be edited or copied into another Questionnaire, preferably the 
 [questionnare editor Healex developed for Compass](https://github.com/NUMde/compass-questionnaire-editor). The relation 
