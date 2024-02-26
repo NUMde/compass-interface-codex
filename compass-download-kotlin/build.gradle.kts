@@ -1,8 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "1.9.0"
+    kotlin("plugin.serialization") version "1.9.22"
     application
     id("maven-publish")
 }
@@ -18,7 +16,7 @@ val ktor_version: String by project
 val kotlinLoggingVersion: String by project
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     implementation("io.ktor:ktor-client-core-jvm:$ktor_version")
     implementation("io.ktor:ktor-client-apache-jvm:$ktor_version")
@@ -27,12 +25,12 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
 
-    implementation("ch.qos.logback", "logback-classic", "1.4.7")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
-    implementation("org.bouncycastle:bcprov-jdk15on:1.68")
-    implementation("org.bouncycastle:bcmail-jdk16:1.46")
-    implementation("org.bouncycastle:bcpkix-jdk15on:1.68")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+    implementation("org.bouncycastle:bcmail-jdk18on:1.77")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.77")
 
     testImplementation(kotlin("test-junit"))
 }
@@ -41,11 +39,7 @@ tasks.test {
     useJUnit()
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
 application {
-    mainClassName = "MainKt"
+    mainClass.set("MainKt")
 }
 

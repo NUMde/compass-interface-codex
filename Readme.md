@@ -32,8 +32,8 @@ The extension is used to fill the LogicalModel, the LogicalModel can be converte
 
 ## Usage
 ### IMPORTANT HINT
-⚠You need to use **at least Java 8 Update 161, Java 9 or newer**, due to the fact that older versionen cannot use AES with more than
-128 Bit due to legal reasons.
+
+⚠You need to use **at least Java 21 or newer**!
 
 ## Beginning 
 Download .jar file from GitHub's releases page and execute: 

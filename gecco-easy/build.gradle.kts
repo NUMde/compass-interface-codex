@@ -40,11 +40,6 @@ publishing {
                         email.set("johannes.oehm@uni-muenster.de")
                     }
                 }
-//                scm {
-//                    connection = 'scm:git:git://example.com/my-library.git'
-//                    developerConnection = 'scm:git:ssh://example.com/my-library.git'
-//                    url = 'http://example.com/my-library/'
-//                }
             }
         }
     }

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM gradle:7.4.2-jdk11-alpine AS TEMP_BUILD_IMAGE
+FROM gradle:8.6.0-jdk21-alpine AS TEMP_BUILD_IMAGE
 
 COPY --chown=gradle:gradle . /home/gradle/src/
 WORKDIR /home/gradle/src
@@ -7,7 +7,7 @@ WORKDIR /home/gradle/src
 RUN gradle clean shadowJar --no-daemon
 
 # actual container
-FROM adoptopenjdk/openjdk11:alpine-jre
+FROM eclipse-temurin:21-alpine
 ENV ARTIFACT_NAME=compass-interface-codex-cli.jar
 ENV APP_HOME=/home/gradle/src
 

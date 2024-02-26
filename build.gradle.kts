@@ -1,9 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version "1.9.20"
-    application
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    kotlin("jvm") version "1.9.22"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 buildscript {
@@ -28,7 +25,7 @@ val kotlinLoggingVersion: String by project
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("ch.qos.logback", "logback-classic", "1.4.8")
+    implementation("ch.qos.logback", "logback-classic", "1.4.14")
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation(project("compass-download-kotlin"))
@@ -38,7 +35,7 @@ dependencies {
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-validation:$hapiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
 
@@ -49,20 +46,16 @@ tasks.test {
     useJUnit()
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
-}
-
-application {
-    mainClass.set((project.properties["mainClass"] ?: "MainKt") as String)
+kotlin {
+    jvmToolchain(21)
 }
 
 tasks.register<proguard.gradle.ProGuardTask>("minimizedJar") {
     dependsOn("shadowJar")
     verbose()
 
-    injars("$buildDir/libs/compass-interface-codex-cli.jar") //TODO
-    outjars("$buildDir/libs/compass-interface-codex-cli.min.jar")
+    injars("${layout.buildDirectory}/libs/compass-interface-codex-cli.jar") //TODO
+    outjars("${layout.buildDirectory}/libs/compass-interface-codex-cli.min.jar")
 
     val javaHome = System.getProperty("java.home")
     if (System.getProperty("java.version").startsWith("1.")) {
@@ -79,13 +72,16 @@ tasks.register<proguard.gradle.ProGuardTask>("minimizedJar") {
             )
         }
     }
-    printmapping("$buildDir/proguard-mapping.txt")
+    printmapping("${layout.buildDirectory}/proguard-mapping.txt")
     configuration("proguard-rules.pro")
 }
 
 
 tasks {
     shadowJar {
+        manifest {
+            attributes("Main-Class" to (project.properties["mainClass"] ?: "MainKt") as String)
+        }
         archiveFileName.set("compass-interface-codex-cli.jar")
     }
 }
