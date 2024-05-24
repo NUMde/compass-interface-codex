@@ -1,8 +1,8 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "1.9.22"
+    kotlin("plugin.serialization") version "2.0.0"
     application
-    id("maven-publish")
+    `maven-publish`
 }
 val projectVersion: String by project
 group = "de.unimuenster.imi.medic"
