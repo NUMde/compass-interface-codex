@@ -155,6 +155,7 @@ fun AnaSmoking(patientRef: Reference, smokingStatus: SmokingStatus, recordedDate
 	subject = patientRef
 	value = smokingStatus.codeableConcept
 	effective = recordedDate
+
 }
 
 fun ObservationLab(patientRef: Reference, coding: Coding, quantity: Quantity, recordedDate: DateTimeType) = Observation().apply {
@@ -345,7 +346,7 @@ fun AnaDNR(patientRef: Reference, resuscitation: Resuscitation) = Consent().appl
 	policy = listOf(Consent.ConsentPolicyComponent().apply {
 		uri = "https://www.aerzteblatt.de/archiv/65440/DNR-Anordnungen-Das-fehlende-Bindeglied"
 	})
-	provision = Consent.provisionComponent().apply {
+	provision = Consent.ProvisionComponent().apply {
 		code = listOf(CodeableConcept(resuscitation.coding))
 	}
 
