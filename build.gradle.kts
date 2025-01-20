@@ -8,7 +8,7 @@ buildscript {
         mavenCentral() // For the ProGuard Gradle Plugin and anything else.
     }
     dependencies {
-        classpath("com.guardsquare:proguard-gradle:7.2.1")  // The ProGuard Gradle plugin.
+        classpath("com.guardsquare:proguard-gradle:7.6.1")  // The ProGuard Gradle plugin.
     }
 }
 
@@ -25,7 +25,7 @@ val kotlinLoggingVersion: String by project
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("ch.qos.logback", "logback-classic", "1.5.12")
+    implementation("ch.qos.logback:logback-classic:1.5.16")
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
 
     implementation(project("compass-download-kotlin"))
@@ -35,7 +35,7 @@ dependencies {
     implementation("ca.uhn.hapi.fhir:hapi-fhir-client:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:$hapiVersion")
     implementation("ca.uhn.hapi.fhir:hapi-fhir-validation:$hapiVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
 
